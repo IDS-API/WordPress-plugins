@@ -1,0 +1,29 @@
+<?php
+// $Id;
+
+/**
+ * @file
+ *   IDS Wordpress Import Plugin default parameters.
+ */
+
+if (!defined('IDS_API_LIBRARY_PATH')) define('IDS_API_LIBRARY_PATH', 'idsapi/');
+
+define('IDS_IMPORT_DEFAULT_DATASET_PUBLIC', 'eldis');
+define('IDS_IMPORT_DEFAULT_DATASET_ADMIN', 'eldis');
+define('IDS_IMPORT_IMPORT_USER', 'IDS');
+define('IDS_IMPORT_CATEGORY_LEVELS', 2);
+define('IDS_IMPORT_IMPORT_RECURRENCE_ASSETS', 'daily');
+define('IDS_IMPORT_IMPORT_RECURRENCE_CATEGORIES', 'monthly');
+define('IDS_IMPORT_USER_EMAIL','api@ids.ac.uk');
+define('IDS_IMPORT_MENU_TITLE', 'IDS Import');
+define('IDS_IMPORT_TAXONOMY', 'idsimport_taxonomy');
+
+define('IDS_IMPORT_NEW_CATEGORIES', TRUE);
+define('IDS_IMPORT_MAP_CATEGORIES', FALSE);
+define('IDS_IMPORT_VERBOSE_IMPORT', TRUE);
+define('IDS_IMPORT_INCLUDE_IMPORTED_DOCUMENTS', TRUE);
+define('IDS_IMPORT_INCLUDE_IMPORTED_ORGANISATIONS', TRUE);
+define('IDS_IMPORT_TAGS', TRUE);
+
+
+
