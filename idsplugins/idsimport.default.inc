@@ -6,7 +6,9 @@
  *   IDS Wordpress Import Plugin default parameters.
  */
 
+// Environment in which we are using the API wrapper. Possible values: 'generic', 'wordpress', 'drupal'. Default is 'generic'.
 if (!defined('IDS_API_LIBRARY_PATH')) define('IDS_API_LIBRARY_PATH', 'idsapi/');
+if (!defined('IDS_API_ENVIRONMENT')) define('IDS_API_ENVIRONMENT', 'wordpress');
 
 define('IDS_IMPORT_DEFAULT_DATASET_PUBLIC', 'eldis');
 define('IDS_IMPORT_DEFAULT_DATASET_ADMIN', 'eldis');

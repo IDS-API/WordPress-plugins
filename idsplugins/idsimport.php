@@ -396,20 +396,31 @@ function idsimport_add_javascript($hook) {
   if ($hook == 'settings_page_idsimport') { // Only in the admin page.
     wp_print_scripts( 'jquery' );
     wp_print_scripts( 'jquery-ui-tabs' );
+
     wp_register_script('idsimport_chosen_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'chosen/chosen.jquery.js', __FILE__));
     wp_enqueue_script('idsimport_chosen_javascript');
+
     wp_register_script('idsimport_jqwidgets_jqxcore_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'jqwidgets/jqwidgets/jqxcore.js', __FILE__));
     wp_enqueue_script('idsimport_jqwidgets_jqxcore_javascript');
+
     wp_register_script('idsimport_jqwidgets_jqxbuttons_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'jqwidgets/jqwidgets/jqxbuttons.js', __FILE__));
     wp_enqueue_script('idsimport_jqwidgets_jqxbuttons_javascript');
+
+    wp_register_script('idsimport_jqwidgets_jqxdropdownbutton_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'jqwidgets/jqwidgets/jqxdropdownbutton.js', __FILE__));
+    wp_enqueue_script('idsimport_jqwidgets_jqxdropdownbutton_javascript');
+
     wp_register_script('idsimport_jqwidgets_jqxscrollbar_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'jqwidgets/jqwidgets/jqxscrollbar.js', __FILE__));
     wp_enqueue_script('idsimport_jqwidgets_jqxscrollbar_javascript');
+
     wp_register_script('idsimport_jqwidgets_jqxpanel_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'jqwidgets/jqwidgets/jqxpanel.js', __FILE__));
     wp_enqueue_script('idsimport_jqwidgets_jqxpanel_javascript');
+
     wp_register_script('idsimport_jqwidgets_jqxtree_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'jqwidgets/jqwidgets/jqxtree.js', __FILE__));
     wp_enqueue_script('idsimport_jqwidgets_jqxtree_javascript');
+
     wp_register_script('idsimport_jqwidgets_jqxcheckbox_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'jqwidgets/jqwidgets/jqxcheckbox.js', __FILE__));
     wp_enqueue_script('idsimport_jqwidgets_jqxcheckbox_javascript');
+
     wp_register_script('idsimport_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'idsplugins.js', __FILE__));
     wp_enqueue_script('idsimport_javascript');
 

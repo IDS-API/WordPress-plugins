@@ -8,6 +8,7 @@
  */
 
 if (!defined('IDS_API_LIBRARY_PATH')) define('IDS_API_LIBRARY_PATH', 'idsapi/');
+if (!defined('IDS_API_ENVIRONMENT')) define('IDS_API_ENVIRONMENT', 'wordpress');
 
 define('IDS_VIEW_MENU_TITLE', 'IDS View');
 

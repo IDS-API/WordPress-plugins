@@ -173,34 +173,35 @@ function idsview_render_form() {
         <?php } // countries, regions ?>
 
         <!-- Themes trees -->
-        <?php $themes_widget_id = 'jqxWidget_' . $dataset; ?>
+        <?php $themes_dropdown_id = 'dropDownButton_' . $dataset; ?>
         <?php $themes_tree_id = 'jqxTree_' . $dataset; ?>
         <tr class="ids-categories-<?php echo $dataset; ?>">
          <th scope="row"><?php _e('Themes'); ?></th>
-          <td>
-          <div id='<?php echo $themes_widget_id; ?>' style="float:left; margin-right:40px;">
-            <div>
-              <div id='<?php echo $themes_tree_id; ?>'>
-              </div>
-            </div>
-          </div>
-
           <!-- Themes select boxes -->
+          <td valign="top">
           <?php
           $field_id = $dataset . '_themes_assets';
           $option_name = $dataset . '_themes_assets';
           ?>
           <div class="ids-categories-themes">
             <select data-placeholder="No themes selected" class="chzn-select" style="width:350px;" id='<?php echo $field_id; ?>' name='idsview_options[<?php echo $option_name; ?>][]' multiple='multiple' size='10'></select><br>
-            <p class="description">
-              Display only documents/organisations with the selected focus themes.<br>
-              <a href="javascript:collapseTree('<?php echo '#' . $themes_tree_id; ?>');">Collapse tree</a> / 
-              <a href="javascript:removeAll('<?php echo $field_id; ?>');"><?php _e('Deselect all'); ?></a>
-            </p>
           </div>
+
+          <div id='<?php echo $themes_dropdown_id; ?>' style="float:left; margin-right:40px;">
+            <div id='<?php echo $themes_tree_id; ?>'>
+            </div>
+          </div>
+
+          <div style="clear:both;">
+          <p class="description">
+            <br>
+            Import only documents/organisations with the selected focus themes.
+            <a href="javascript:removeAll('<?php echo $field_id; ?>');"><?php _e('Deselect all'); ?></a>
+          </p>
+          </div>
+
           </td>
         </tr>
-        <tr>
 
 
 

@@ -65,19 +65,62 @@ function populateSelectBoxes() {
   $jqorig.each(['eldis', 'bridge'], function(i, dataset) {
     /* Create and populate themes trees */
     var id_tree = '#jqxTree_' + dataset;
+    var id_dropdown = '#dropDownButton_' + dataset;
+
     $jqtree(id_tree).jqxTree({ source: ids_array_trees_themes[dataset], height: '200px', width: '350px' });
+    $jqtree(id_dropdown).jqxDropDownButton({ width: '350px', height: '25px' });
+
+    var dropDownContent = '<div style="position: relative; margin-left: 3px; margin-top: 5px;">Select themes...</div>';
+    $jqtree(id_dropdown).jqxDropDownButton('setContent', dropDownContent);
+
+    $jqtree(id_dropdown).bind('close',function () {
+      $jqtree(id_tree).jqxTree('collapseAll');
+    });
+
+    /* When an item is expanded, it retrieves the subcategories dynamically. */
+    $jqtree(id_tree).bind('expand', function (event) {
+      var element = $jqtree(event.args.element);
+      var loader = false;
+      var loaderItem = null;
+      var children = element.find('li');
+      $jqtree.each(children, function () {
+        var item = $jqtree(id_tree).jqxTree('getItem', this);
+        console.log(item);
+        var prot = item.value.slice(0,7);
+        if (prot == 'http://') {
+          loaderItem = item;
+          loader = true;
+          return false
+        };
+      });
+      if (loader) {
+        $jqtree.ajax({
+          url: loaderItem.value,
+          dataType: 'jsonp',
+          success: function (data, status, xhr) {
+            $jqtree(id_tree).jqxTree('addTo', data, element[0]);
+            $jqtree(id_tree).jqxTree('removeItem', loaderItem.element);
+          }
+        });
+      }
+    });
+
+    var id_select_themes = '#' + dataset + '_themes_assets';
+    var select_themes = $jqorig(id_select_themes);
+    /* When an item is selected, it populates the corresponding chosen select box. */
     $jqtree(id_tree).bind('select', function (event) {
       var args = event.args;
       var item = $jqtree(id_tree).jqxTree('getItem', args.element);
-      var title = item.label;
       var object_id = item.value;
-      var id_select_themes = '#' + dataset + '_themes_assets';
-      var select_themes = $jqorig(id_select_themes);
-      if ($jqorig(id_select_themes + ' option[value=' + object_id + ']').length == 0) {
-        select_themes.append($jqorig("<option></option>").attr("value", object_id).text(title));
+      if (object_id !== null) {
+        var title = item.label;
+        var exists = $jqorig(id_select_themes + ' option[value=' + object_id + ']').length;
+        if (exists == 0) {
+          select_themes.append($jqorig("<option></option>").attr("value", object_id).text(title));
+        }
+        $jqorig('#' + dataset + '_themes_assets' + ' option[value="' + object_id +'"]').prop("selected", true);
+        $jqchosen(select_themes).trigger("liszt:updated");
       }
-      $jqorig('#' + dataset + '_themes_assets' + ' option[value="' + object_id +'"]').prop("selected", true);
-      $jqchosen(select_themes).trigger("liszt:updated");
     });
 
     $jqorig.each(['countries', 'regions', 'themes'], function(j, category) { 
@@ -132,10 +175,8 @@ function populateSelectBoxes() {
       }
     });
   });
-
   $jqchosen(".chzn-select").chosen();
   $jqchosen(".chzn-select-deselect").chosen({allow_single_deselect:true});
-
 }
 
 function selectAll(id_cat_field) {

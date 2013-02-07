@@ -232,53 +232,23 @@ function ids_js_array($array_category) {
   return $js_array;
 }
 
-// Creates javascript arrays to populate trees from category arrays retrieved by the API.
-function ids_js_tree($array_category) {
-  if (!empty($array_category)) {
-    $current_level = 0;
-    $js_tree = '';
-    foreach ($array_category as $cat_id => $label) {
-      $level = substr_count($label, '--') + 1;
-      $tabs = '';
-      for ($i = 1; $i <= $level; $i++) {
-        $tabs .= '  ';
-      }
-      if ($current_level == 0) {
-        $current_level = 1;
-        $js_tree .= '[' . "\n" . $tabs . '{' ;
-      }
-      elseif ($level < $current_level) {
-        $step = $current_level - $level;
-        $current_level = $level;
-        $js_tree .= '}';
-        for ($i = 1; $i <= $step; $i++) {
-          $js_tree .= ' ]}';
-        }
-        $js_tree .=  ',' . "\n" . $tabs . ' {';
-      }
-      elseif ($level > $current_level) {
-        if ($level - $current_level > 1) { 
-          $level = $current_level+1;
-        }
-        $current_level = $level;
-        $js_tree .= ',' . "\n" . $tabs . ' items:['. "\n" . $tabs . ' {';
-      }
-      else {
-        $js_tree .= '},' . "\n" . $tabs . ' {';
-      }
-      $js_tree .= 'label:"' . addslashes(trim($label, '-')) . '", value:"' . $cat_id . '"';
+// Load themes to populate tree in the "settings" page.
+function ids_js_tree($type, $dataset, $api_key) {
+  $idsapi = new IdsApiWrapper;
+  $response = $idsapi->search($type, $dataset, $api_key, 'short', 0, 0, array('archived' => 'false', 'level' => 1));
+  $results = array();
+  $url = plugins_url('idsapi.trees.php', __FILE__);
+  $url .= '?token_guid=' . $api_key . '&site=' . $dataset .'&type=' . $type;
+  if (!$response->isError()) {
+    foreach ($response->results as $item) {
+      $results[] = "{ 'label': '$item->title', 'value': '$item->object_id', 'items': [{ 'value': '$url&id=$item->object_id', 'label': 'Loading...' }] }";
     }
-    $js_tree .= '}' . "\n";
-    for ($i = 1; $i < $current_level; $i++) {
-      $js_tree .= ' ]}';
-    }
-    $js_tree .= "\n" . ' ];' . "\n";
   }
-  else {
-    $js_tree = '{}';
-  }
-  return $js_tree;
+  $output = implode(",\n", $results);
+  $output = "[\n" . $output . "\n]";
+  return $output;
 }
+
 
 // Converts a PHP array into a javascript one.
 function ids_php2js($php_array = array()) {
@@ -347,8 +317,7 @@ function ids_init_javascript($api_key, $api_key_validated, $default_dataset, $ca
         echo "\nids_array_categories['$dataset']['$category'] = " . ids_js_array($ids_array_categories[$dataset][$category]);
       }
       // Populate sources of the tree widgets.
-      // In the future this and ids_array_categories will be unified so as not to have duplicated data. */
-      echo "\nids_array_trees_themes['$dataset'] = " . ids_js_tree($ids_array_categories[$dataset]['themes']);
+      echo "\nids_array_trees_themes['$dataset'] = " . ids_js_tree($category, $dataset, $api_key);
     } 
   }
   ?>

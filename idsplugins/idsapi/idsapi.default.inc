@@ -6,9 +6,6 @@
 * Sets default values to the API URL, documentation URL, cache time, etc.
 */
 
-// Environment in which we are using the API wrapper. Possible values: 'generic', 'wordpress', 'drupal'. Default is 'generic'.
-define('IDS_API_ENVIRONMENT', 'wordpress');
-
 // Cache parameters for API responses.
 define('IDS_API_USE_CACHE', TRUE);
 define('IDS_API_CACHE_REQUESTS', 'idsapi_cache');

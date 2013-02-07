@@ -94,7 +94,6 @@ function idsimport_general_page() {
     <ul class="ids-category-list">
     <?php
     $task = '';
-
     if(isset($_GET['admin_task'])) {
       $task = $_GET['admin_task'];
     }
@@ -112,7 +111,6 @@ function idsimport_general_page() {
     $category_type = '';
     $asset_type = '';
     ?>
-
     <br/>
     <i><?php _e('Bulk processing'); ?></i>
     <br/>
@@ -229,7 +227,7 @@ function idsimport_importer_form() {
   <table class="form-table">
     <tr valign="top">
       <td colspan="2"> 
-        <strong>Active settings and filters</strong><br />
+        <strong><?php _e('Active settings and filters'); ?></strong><br />
         (<?php printf(__('Please go to the <a href="%s">IDS API administrative page</a> in order to view the details or change these settings.'), 'options-general.php?page=idsimport'); ?>)
       </td>
     </tr>
@@ -485,31 +483,33 @@ function idsimport_render_form() {
         <?php } // countries, regions ?>
 
         <!-- Themes trees -->
-        <?php $themes_widget_id = 'jqxWidget_' . $dataset; ?>
+        <?php $themes_dropdown_id = 'dropDownButton_' . $dataset; ?>
         <?php $themes_tree_id = 'jqxTree_' . $dataset; ?>
         <tr class="ids-categories-<?php echo $dataset; ?>">
          <th scope="row"><?php _e('Themes'); ?></th>
-          <td>
-          <div id='<?php echo $themes_widget_id; ?>' style="float:left; margin-right:40px;">
-            <div>
-              <div id='<?php echo $themes_tree_id; ?>'>
-              </div>
-            </div>
-          </div>
-
           <!-- Themes select boxes -->
+          <td valign="top">
           <?php
           $field_id = $dataset . '_themes_assets';
           $option_name = $dataset . '_themes_assets';
           ?>
           <div class="ids-categories-themes">
             <select data-placeholder="No themes selected" class="chzn-select" style="width:350px;" id='<?php echo $field_id; ?>' name='idsimport_options[<?php echo $option_name; ?>][]' multiple='multiple' size='10'></select><br>
-            <p class="description">
-              Import only documents/organisations with the selected focus themes.<br>
-              <a href="javascript:collapseTree('<?php echo '#' . $themes_tree_id; ?>');">Collapse tree</a> / 
-              <a href="javascript:removeAll('<?php echo $field_id; ?>');"><?php _e('Deselect all'); ?></a>
-            </p>
           </div>
+
+          <div id='<?php echo $themes_dropdown_id; ?>' style="float:left; margin-right:40px;">
+            <div id='<?php echo $themes_tree_id; ?>'>
+            </div>
+          </div>
+
+          <div style="clear:both;">
+          <p class="description">
+            <br>
+            Import only documents/organisations with the selected focus themes.
+            <a href="javascript:removeAll('<?php echo $field_id; ?>');"><?php _e('Deselect all'); ?></a>
+          </p>
+          </div>
+
           </td>
         </tr>
         <tr>
@@ -789,11 +789,9 @@ function idsimport_render_form() {
 function idsimport_posts_columns($defaults) {
   global $ids_categories;
   global $ids_datasets;
-
   $idsimport_new_categories = idsapi_variable_get('idsimport', 'import_new_categories', IDS_IMPORT_NEW_CATEGORIES);
   $site = '';
   $datasets = $ids_datasets;
-
   if (isset($_GET['post_type'])) {
     $post_type = $_GET['post_type'];
     if (($post_type == 'ids_documents') || ($post_type == 'ids_organisations')) {
@@ -827,7 +825,6 @@ function idsimport_posts_columns($defaults) {
 function idsimport_edit_post_form() {
   global $ids_datasets;
   global $ids_categories;
-
   $idsimport_new_categories = idsapi_variable_get('idsimport', 'import_new_categories', IDS_IMPORT_NEW_CATEGORIES);
   if (!$idsimport_new_categories) {
     $types = array('post', 'ids_documents', 'ids_organisations');
@@ -839,13 +836,6 @@ function idsimport_edit_post_form() {
         }
       }
     }
-  }
-}
-
-// Removes the IDS category widgets from the "quick edit" area.
-function idsimport_edit_post_quickedit($column_name, $post_type) {
-  if (preg_match('/[eldis][bridge]/', $column_name)) {
-    return FALSE;
   }
 }
 
@@ -916,7 +906,7 @@ function idsimport_categories_page($dataset, $category) {
 <?php
 }
 
-// TODO. Complete.
+// Displays the help page.
 function idsimport_help_page() {
 ?>
   <div class="wrap">
