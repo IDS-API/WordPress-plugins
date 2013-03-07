@@ -9,8 +9,8 @@ function idsimport_get_id_by_meta($type, $meta_key, $meta_value) {
   global $wpdb;
   $table = $wpdb->prefix . $type . 'meta';
   $id = $type . '_id';
-  $select = "SELECT $id FROM $table WHERE meta_key = '$meta_key' AND meta_value = '$meta_value'";
-  $term_id = $wpdb->get_var( $wpdb->prepare( $select ) );
+  $select = "SELECT $id FROM $table WHERE meta_key = '%s' AND meta_value = '%s'";
+  $term_id = $wpdb->get_var($wpdb->prepare($select, $meta_key, $meta_value));
   return $term_id;
 }
 
@@ -35,9 +35,9 @@ function idsimport_create_taxonomy_metadata() {
   global $wpdb;
   $table = $wpdb->prefix . IDS_IMPORT_TAXONOMY . 'meta';
   $charset_collate = '';	
-	if ( ! empty($wpdb->charset) )
+	if (!empty($wpdb->charset))
 		$charset_collate = "DEFAULT CHARACTER SET $wpdb->charset";
-	if ( ! empty($wpdb->collate) )
+	if (!empty($wpdb->collate))
 		$charset_collate .= " COLLATE $wpdb->collate";
 	
 	$tables = $wpdb->get_results("show tables like '$table'");

@@ -124,7 +124,7 @@ class IdsApiWrapper {
   *                 the total number of results available in the dataset (as indicated in the 'metadata' part of the response).
   */
   protected function getDecodedResults($url, $num_retrieved) {
-    $data = $this->getResponseData($url);
+    $data = $this->getResponseData($url); 
     if (is_array($data) && !empty($data)) {
       $results = $this->getResponseResults($data);
       $metadata = $this->getResponseMetadata($data);
@@ -156,11 +156,12 @@ class IdsApiWrapper {
   */
   protected function getResponseData($url) {
     // In other environments (like Drupal or Wordpress) different implementations of this function are provided.
-    if (function_exists('idsapi_get_data')) {
+    // Commented until further analysed, as there seems to be a problem when using wp_remote_get now.
+    /* if (function_exists('idsapi_get_data')) {
       $data = idsapi_get_data($url);
-    }
+    } */
     // If cURL is available, we use it.
-    elseif (function_exists('curl_init')) {
+    if (function_exists('curl_init')) {
       $ch = curl_init($url);
       curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
       $content = curl_exec($ch);
