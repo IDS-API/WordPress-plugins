@@ -242,7 +242,7 @@ function idsimport_include_idsassets_loop($query) {
       $post_types = array($post_type);
     }
     elseif (is_array($post_type)) {
-      $post_types = merge($post_type, $all_post_types);
+      $post_types = array_merge($post_type, $all_post_types);
     }
     $query->set('post_type', $post_types);
   }
