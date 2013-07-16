@@ -225,14 +225,13 @@ function idsimport_include_idsassets_loop($query) {
     $idsimport_include_imported_organisations = idsapi_variable_get('idsimport', 'include_imported_organisations', IDS_IMPORT_INCLUDE_IMPORTED_ORGANISATIONS);
 
     // Type of IDS assets to show by default, according to the plugin settings.
-    $all_post_types = array('post');
-    if ($idsimport_include_imported_documents) {
-      $all_post_types[] = 'ids_documents';
+    $all_post_types = get_post_types();
+    if (!$idsimport_include_imported_documents) {
+      unset($all_post_types['ids_documents']);
     }
-    if ($idsimport_include_imported_organisations) {
-      $all_post_types[] = 'ids_organisations';
-    }
-
+    if (!$idsimport_include_imported_organisations) {
+      unset($all_post_types['ids_organisations']);
+    }   
     // If the post type is filtered in the URL.
     $post_type = get_query_var('post_type');
     if (empty($post_type)) {
