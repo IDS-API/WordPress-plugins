@@ -267,13 +267,7 @@ function ids_init_javascript($api_key, $api_key_validated, $default_dataset, $ca
   ?>
   <script type="text/javascript">
   var $jqorig = jQuery.noConflict();
-  </script>
-  <script type='text/javascript' src='<?php echo plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'jqwidgets/scripts/jquery-1.8.2.min.js', __FILE__); ?>'></script>
-  <script type="text/javascript">
   var $jqtree = jQuery.noConflict();
-  </script>
-  <script type='text/javascript' src='<?php echo plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'chosen/chosen.jquery.min.js', __FILE__); ?>'></script>
-  <script type="text/javascript">
   var $jqchosen = jQuery.noConflict();
   </script>
   <script type="text/javascript">
