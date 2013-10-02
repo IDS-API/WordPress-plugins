@@ -53,11 +53,11 @@ function ids_organisation_url($before = '', $after = '') {
 function ids_authors($before = '', $sep = ', ', $after = '') {
   global $post;
   $authors = (isset($post->authors) ? $post->authors : get_post_meta($post->ID, 'authors', FALSE));
-  if ($authors) {
+  if (is_array($authors)) {
     $authors = implode($sep, $authors);
-    if ($authors) {
-      echo $before . $authors . $after;
-    }
+  }
+  if ($authors) {
+    echo $before . $authors . $after;
   }
 }
 
@@ -65,11 +65,14 @@ function ids_authors($before = '', $sep = ', ', $after = '') {
 function ids_external_urls($before = '', $sep = ', ', $after = '') {
   global $post;
   $urls = (isset($post->urls) ? $post->urls : get_post_meta($post->ID, 'urls', FALSE));
-  if ($urls) {
+  if (is_array($urls)) {
     $urls = implode($sep, array_map('ids_new_html_link', $urls, $urls));
-    if ($urls) {
-      echo $before . $urls . $after;
-    }
+  }
+  else {
+    $urls = ids_new_html_link($urls, $urls);
+  }
+  if ($urls) {
+    echo $before . $urls . $after;
   }
 }
 
