@@ -44,6 +44,7 @@ add_action('admin_menu', 'idsimport_add_menu', 9);
 add_action('admin_menu', 'idsimport_remove_submenu_pages');
 add_action('admin_notices', 'idsimport_admin_notices');
 add_action('wp_enqueue_scripts', 'idsimport_add_stylesheet');
+add_action('admin_enqueue_scripts', 'idsimport_add_stylesheet');
 add_action('admin_enqueue_scripts', 'idsimport_add_admin_stylesheet');
 add_action('admin_enqueue_scripts', 'idsimport_add_javascript');
 add_filter('plugin_action_links', 'idsimport_plugin_action_links', 10, 2);
