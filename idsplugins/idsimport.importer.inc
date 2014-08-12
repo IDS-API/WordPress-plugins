@@ -88,6 +88,15 @@ class IDS_Importer extends WP_Importer {
             $output = __('Updated ') . $results['updated'] . ' ' . ucfirst($dataset) . ' ' . __($type);
             echo ids_div_field_wrapper('ids-results-import', '', '', $output);
           }
+          if ($results['duplicated']) {
+            $total += $results['duplicated'];
+            $output = __('New versions created for ') . $results['duplicated'] . ' ' . ucfirst($dataset) . ' ' . __($type);
+            echo ids_div_field_wrapper('ids-results-import', '', '', $output);
+          }
+          if ($results['skipped']) {
+            $output = __('Skipped ') . $results['skipped'] . ' ' . ucfirst($dataset) . ' ' . __($type);
+            echo ids_div_field_wrapper('ids-results-import', '', '', $output);
+          }
         }
         if (!$total && !$exclude) {
           $output = __('Nothing was imported.');
@@ -137,10 +146,10 @@ class IDS_Importer extends WP_Importer {
 
   // Import assets.
   function import_assets($dataset, $type) {
-    $this->terms[$dataset][$type] = array('new' => 0, 'updated' => 0);
+ 		$updated_assets = idsapi_variable_get('idsimport', 'updated_assets', IDS_IMPORT_UPDATED_ASSETS);
+    $this->terms[$dataset][$type] = array('new' => 0, 'updated' => 0, 'skipped' => 0, 'duplicated' => 0);
     if (!idsapi_exclude($dataset, $type)) {
-      if ($response = $this->retrieve_content($dataset, $type)) {
-        $assets = $response->results;
+      if ($assets = $this->retrieve_content($dataset, $type)) {
         if (!empty($assets)) {
           $post_type = 'ids_' . $type;
           $object_id_field = $dataset . '_object_id';
@@ -150,13 +159,58 @@ class IDS_Importer extends WP_Importer {
               echo ids_div_field_wrapper('ids-title-output-importer', '', '', $output);
             }
             foreach ($assets as $asset) {
-              if ($post_id = idsimport_get_id_by_meta('post', $object_id_field, $asset->object_id)) { // The post already exists in the dataset. Update it.
-                $post_id = idsimport_update_asset($post_id, $dataset, $post_type, $asset);
-                if ($post_id) {
-                  $this->terms[$dataset][$type]['updated']++;
+              if ($post_ids = idsimport_get_ids_by_meta('post', $object_id_field, $asset->object_id)) { // The post already exists in the dataset.
+                if ($updated_assets !== 'skip') {
+                  $post_id = $post_ids[0]; //TODO: check if both are pending or published.
+                  $old_date_updated = get_post_meta($post_id, 'date_updated', TRUE);
+                  if (!is_numeric($old_date_updated)) { // for backwards compatibility
+                    $old_date_updated = strtotime($old_date_updated);
+                  }
+                  if ($asset->date_updated > $old_date_updated) { // the new version is more recent
+                    switch ($updated_assets) {
+                      case 'overwrite':                 
+                        $post_id = idsimport_update_asset($post_id, $dataset, $post_type, $asset);
+                        if ($post_id) {
+                          $this->terms[$dataset][$type]['updated']++;
+                        }
+                        else {
+                          idsapi_register_error('idsimport', __('The post could not be updated for ') . $asset->object_id, 'IDS_Importer::import_assets', 'warning');
+                        }
+                        break;
+                      case 'keep': 
+                        if (count($post_ids) == 1) {
+                          $post_id = idsimport_insert_asset($dataset, $post_type, $asset, TRUE);
+                          if ($post_id) {
+                            $this->terms[$dataset][$type]['duplicated']++ ;
+                          }
+                          else {
+                            idsapi_register_error('idsimport', __('A new version of the post could not be created for ') . $asset->object_id, 'IDS_Importer::import_assets', 'warning');
+                          }
+                        }
+                        else {
+                          if (is_admin() && IDS_IMPORT_VERBOSE_IMPORT) {
+                            $output = $asset->title . ' - ' . __('skipped (there are already two versions for this asset)');
+                            echo ids_div_field_wrapper('ids-item-output-importer', '', '', $output);
+                          }
+                          $this->terms[$dataset][$type]['skipped']++;
+                        }
+                        break;
+                    }
+                  }
+                  else {
+                    if (is_admin() && IDS_IMPORT_VERBOSE_IMPORT) {
+                      $output = $asset->title . ' - ' . __('skipped (most recent version already imported)');
+                      echo ids_div_field_wrapper('ids-item-output-importer', '', '', $output);
+                    }
+                    $this->terms[$dataset][$type]['skipped']++;
+                  }
                 }
                 else {
-                  idsapi_register_error('idsimport', __('The post could not be updated for ') . $asset->object_id, 'import_assets', 'warning');
+                  if (is_admin() && IDS_IMPORT_VERBOSE_IMPORT) {
+                    $output = $asset->title . ' - ' . __('skipped');
+                    echo ids_div_field_wrapper('ids-item-output-importer', '', '', $output);
+                  }
+                  $this->terms[$dataset][$type]['skipped']++;
                 }
               }
               else { // The asset does not exist in the dataset. Create it.
@@ -184,8 +238,7 @@ class IDS_Importer extends WP_Importer {
       $this->terms[$dataset][$type] = array('new' => 0, 'updated' => 0);
       $update_children = array();
       $levels = idsapi_variable_get('idsimport', 'level_categories', IDS_IMPORT_CATEGORY_LEVELS);
-      if ($response = $this->retrieve_content($dataset, $type, $levels)) {
-        $categories = $response->results;
+      if ($categories = $this->retrieve_content($dataset, $type, $levels)) {
         if (!empty($categories)) {
           $taxonomy_name = $dataset . '_' . $type;
           if (taxonomy_exists($taxonomy_name)) {
@@ -210,11 +263,6 @@ class IDS_Importer extends WP_Importer {
                   $update_parent = TRUE;
                 }
               }
-              /*
-              else {
-                $term = term_exists($category_name, $taxonomy_name);
-              }
-              */
               $term = term_exists($category_name, $taxonomy_name);
               if ($term) {
                 if (is_array($term)) {
@@ -233,7 +281,7 @@ class IDS_Importer extends WP_Importer {
                 }
                 // Update the term corresponding to the category.
                 if (is_admin() && IDS_IMPORT_VERBOSE_IMPORT) {
-                  $output = $category_name_display . ' (' . __('updated') . ') ';
+                  $output = $category_name_display . ' - ' . __('updated');
                   echo ids_div_field_wrapper('ids-item-output-importer', '', '', $output);
                 }
                 if (idsimport_update_category($term_id, $dataset, $taxonomy_name, $category, $term_args)) {
@@ -246,7 +294,7 @@ class IDS_Importer extends WP_Importer {
               else {
                 // Create a new term for the category.
                 if (is_admin() && IDS_IMPORT_VERBOSE_IMPORT) {
-                  $output = $category_name_display . ' (' . __('new') . ') ';
+                  $output = $category_name_display . ' - ' . __('new');
                   echo ids_div_field_wrapper('ids-item-output-importer', '', '', $output);
                 }
                 $term_id = idsimport_insert_category($dataset, $taxonomy_name, $category, $term_args);
@@ -270,6 +318,7 @@ class IDS_Importer extends WP_Importer {
 
   // Call the API to retrieve content of the indicated type, using the the plugin settings.
   function retrieve_content($dataset, $type, $levels = 0) {
+    $content = array();
     $idsapi = new IdsApiWrapper;
     $api_key = idsapi_variable_get('idsimport', 'api_key', '');
     $format = 'full';
@@ -285,7 +334,7 @@ class IDS_Importer extends WP_Importer {
       if ($idsimport_import_query) {
         $search_params = explode(',', $idsimport_import_query);
         foreach ($search_params as $search_param) {
-          $param = explode('=',trim($search_param));
+          $param = explode('=', trim($search_param));
           $key = $param[0];
           $value = $param[1];
           $filter_params[$key] = $value;
@@ -303,6 +352,7 @@ class IDS_Importer extends WP_Importer {
       if ($type == 'documents') { // Document-specific filters
         $idsimport_import_authors_assets = idsapi_variable_get('idsimport', 'import_authors_assets', '');
         $idsimport_import_publishers_assets = idsapi_variable_get('idsimport', 'import_publishers_assets', '');
+        $idsimport_language_name_codes = idsapi_variable_get('idsimport', 'language_name_codes', array());
         if ($idsimport_import_authors_assets) {
           $authors = explode(',', $idsimport_import_authors_assets);
           $list_authors = implode('|', array_map('trim', $authors));
@@ -312,6 +362,55 @@ class IDS_Importer extends WP_Importer {
           $publishers = explode(',', $idsimport_import_publishers_assets);
           $list_publishers = implode('|', array_map('trim', $publishers));
           $filter_params['publisher_name'] = $list_publishers;
+        }
+        if ($idsimport_language_name_codes) {
+          $ids_languages = ids_languages();
+          $list_language_names = array();
+          foreach ($idsimport_language_name_codes as $language_code) {
+            if (isset($ids_languages[$language_code])) {
+              $list_language_names[] = $ids_languages[$language_code]; 
+            }
+            if ($list_language_names) {
+              $language_names = implode('|', $list_language_names);
+              $filter_params['language_name'] = $language_names;
+            }
+          }
+        }
+      }
+      // Keep only those assets whose URIs don't match the ones to exclude. Paginate until we get the number requested.
+      $num_retrieved = 0;
+      $total_results = 0;
+      $offset = 0;
+      $more_results = TRUE;
+      while ((!$num_requested || ($num_retrieved < $num_requested)) && $more_results) {
+        if ($offset) {
+          $filter_params['start_offset'] = $offset;
+        }
+        $response = $response = $idsapi->search($type, $dataset, $api_key, $format, $num_requested, $age_results, $filter_params);
+        if ($response->isError()) {
+          $error_message = __('No content retrieved by the API call. ') . $response->getErrorMessage();
+          idsapi_register_error('idsimport', $error_message, 'IDS_Importer::retrieve_content', 'warning');
+          $more_results = FALSE;
+        }
+        else {
+          $assets_retrieved = $response->getResults();
+          if (!empty($assets_retrieved)) {
+            foreach ($assets_retrieved as $asset) {
+              if (!ids_exclude_asset('idsimport', $asset)) {
+                $content[] = $asset;
+                $num_retrieved++;
+              }
+              $offset++; 
+              if ($num_retrieved == $num_requested) {
+                break;
+              }
+            }
+            $total_results = $response->getTotalResults();
+            $more_results = ($total_results > $offset);
+          }
+          else {
+            $more_results = FALSE;
+          }
         }
       }
     } else { // is country, region or theme
@@ -326,14 +425,17 @@ class IDS_Importer extends WP_Importer {
       }
       $num_requested = 0;
       $age_results = 0;
+      $response = $idsapi->search($type, $dataset, $api_key, $format, $num_requested, $age_results, $filter_params);
+      if ($response->isError()) {
+        $error_message = __('No content retrieved by the API call. ') . $response->getErrorMessage();
+        idsapi_register_error('idsimport', $error_message, 'IDS_Importer::retrieve_content', 'warning');
+        $content = FALSE;
+      }
+      else {
+        $content = $response->getResults();
+      }
     }
-    $response = $idsapi->search($type, $dataset, $api_key, $format, $num_requested, $age_results, $filter_params);
-    if ($response->isError()) {
-      $error_message = __('No content retrieved by the API call. ') . $response->errorMessage();
-      idsapi_register_error('idsimport', $error_message, 'IDS_Importer::retrieve_content', 'warning');
-      $response = FALSE;
-    }
-    return $response;
+    return $content;
   }
 
 } // Class IDS_Import
@@ -345,8 +447,9 @@ class IDS_Importer extends WP_Importer {
 //------------------------ Functions to manage imported content ------------------------
 
 // Create new post with imported asset.
-function idsimport_insert_asset($dataset, $post_type, $asset) {
+function idsimport_insert_asset($dataset, $post_type, $asset, $duplicated = FALSE) {
   $import_keywords = idsapi_variable_get('idsimport', 'import_tags', IDS_IMPORT_TAGS);
+  $import_additional_languages = idsapi_variable_get('idsimport', 'additional_languages', array());
   $idsimport_import_user_id = idsapi_variable_get('idsimport', 'import_user_id', '0');
   $ids_api_key = idsapi_variable_get('idsimport', 'api_key', '');
   $idsimport_pub_date = idsapi_variable_get('idsimport', 'pub_date', 'default');
@@ -356,11 +459,19 @@ function idsimport_insert_asset($dataset, $post_type, $asset) {
   $themes_taxonomy = $dataset . '_themes';
   $object_id_field = $dataset . '_object_id';
   $post = array();
-  $post['post_title'] = $asset->title;
+  $default_language = idsapi_variable_get('idsimport', 'language', IDS_IMPORT_DEFAULT_LANGUAGE);
+  $title = ids_get_translation($asset, 'title', $default_language);
+  $description = ids_get_translation($asset, 'description', $default_language);
+  $post['post_title'] = $title;
   $post['post_name'] = $dataset . '-' . sanitize_title($asset->title);
-  $post['post_content'] = $asset->description;
+  if ($duplicated) {
+    $post['post_title'] .= ' [UPDATED]';
+    $post['post_name'] .= '-2';
+  }
+  $post['post_excerpt'] = ids_excerpt_post('idsimport', $description);
+  $post['post_content'] = $description;
   $post['post_type'] = $post_type;
-  if (in_array($dataset, $display_sites)) {
+  if (!$duplicated && in_array($dataset, $display_sites)) {
     $post['post_status'] = 'publish';
   }
   else {
@@ -377,18 +488,23 @@ function idsimport_insert_asset($dataset, $post_type, $asset) {
   }
   $post_id  = wp_insert_post($post);
   if (is_admin() && IDS_IMPORT_VERBOSE_IMPORT) {
-    $output = $asset->title . ' (' . __('new') . ') ';
+    if ($duplicated) {
+      $output = $title . ' - ' . __('new version of existing post');
+    }
+    else {
+      $output = $title . ' - ' . __('new');
+    }
     echo ids_div_field_wrapper('ids-item-output-importer', '', '', $output);
   }
   if ($post_id) {
     add_post_meta($post_id, $object_id_field, $asset->object_id, TRUE);
-    // Extra fields that could not be present in 'short' responses.
+    // Extra fields that could be not present in 'short' responses.
     if (isset($asset->site)) { add_post_meta($post_id, 'site', $asset->site, TRUE); }
     if (isset($asset->timestamp)) { add_post_meta($post_id, 'timestamp', $asset->timestamp, TRUE); }
     if (isset($asset->website_url)) { add_post_meta($post_id, 'website_url', $asset->website_url, TRUE); }
     if (isset($asset->asset_id)) { add_post_meta($post_id, 'asset_id', $asset->asset_id, TRUE); }
-    if (isset($asset->date_created)) { add_post_meta($post_id, 'date_created', date_i18n(get_option('date_format'), $asset->date_created), TRUE); }
-    if (isset($asset->date_updated)) { add_post_meta($post_id, 'date_updated', date_i18n(get_option('date_format'), $asset->date_updated), TRUE); }
+    if (isset($asset->date_created)) { add_post_meta($post_id, 'date_created', $asset->date_created, TRUE); }
+    if (isset($asset->date_updated)) { add_post_meta($post_id, 'date_updated', $asset->date_updated, TRUE); }
     if (isset($asset->country_focus_array)) { idsimport_update_categories_post($post_id, $dataset, $countries_taxonomy, $asset->country_focus_array); }
     if (isset($asset->category_region_array)) { idsimport_update_categories_post($post_id, $dataset, $regions_taxonomy, $asset->category_region_array); }
     if (isset($asset->category_theme_array)) { idsimport_update_categories_post($post_id, $dataset, $themes_taxonomy, $asset->category_theme_array); }
@@ -404,12 +520,21 @@ function idsimport_insert_asset($dataset, $post_type, $asset) {
     }
     if ($post_type == 'ids_documents') {
     // Document-specific fields.
-      if (isset($asset->authors)) { idsimport_add_post_array_meta($post_id, 'authors', $asset->authors, TRUE); }
+      if (isset($asset->authors)) { idsimport_add_post_array_meta($post_id, 'authors', $asset->authors); }
       if (isset($asset->language_name)) { add_post_meta($post_id, 'language_name', $asset->language_name, TRUE); }
       if (isset($asset->publication_date)) { add_post_meta($post_id, 'publication_date', $asset->publication_date, TRUE); }
       if (isset($asset->licence_type)) { add_post_meta($post_id, 'licence_type', $asset->licence_type, TRUE); }
       if (isset($asset->publisher_array)) { idsimport_add_post_array_meta($post_id, 'publisher_array', $asset->publisher_array, TRUE); }
-      if (isset($asset->urls)) { idsimport_add_post_array_meta($post_id, 'urls', $asset->urls, TRUE); }
+      if (isset($asset->urls)) { idsimport_add_post_array_meta($post_id, 'urls', $asset->urls); }
+      foreach ($import_additional_languages as $lang_code) {
+        foreach (array('title', 'description') as $field) { // Iterate through the translatable fields. This could be generalised.
+          $field_name = $field . '_' . $lang_code;
+          $field_value = ids_get_translation($asset, $field, $lang_code, FALSE);
+          if ($field_value) {
+            add_post_meta($post_id, $field_name, $field_value, TRUE);
+          }
+        }
+      }
     }
     elseif ($post_type == 'ids_organisations') {
     // Organisation-specific fields.
@@ -429,6 +554,7 @@ function idsimport_insert_asset($dataset, $post_type, $asset) {
 // Update post with imported asset.
 function idsimport_update_asset($post_id, $dataset, $post_type, $asset) {
   $import_keywords = idsapi_variable_get('idsimport', 'import_tags', '0');
+  $import_additional_languages = idsapi_variable_get('idsimport', 'additional_languages', array());
   $idsimport_import_user_id = idsapi_variable_get('idsimport', 'import_user_id', '0');
   $ids_api_key = idsapi_variable_get('idsimport', 'api_key', '');
   $idsimport_pub_date = idsapi_variable_get('idsimport', 'pub_date', 'default');
@@ -438,8 +564,12 @@ function idsimport_update_asset($post_id, $dataset, $post_type, $asset) {
   $object_id_field = $dataset . '_object_id';
   $updated_post = array();
   $updated_post['ID'] = $post_id;
-  $updated_post['post_title'] = $asset->title;
-  $updated_post['post_content'] = $asset->description;
+  $default_language = idsapi_variable_get('idsimport', 'language', IDS_IMPORT_DEFAULT_LANGUAGE);
+  $title = ids_get_translation($asset, 'title', $default_language);
+  $description = ids_get_translation($asset, 'description', $default_language);
+  $updated_post['post_title'] = $title;
+  $updated_post['post_excerpt'] = ids_excerpt_post('idsimport', $description);
+  $updated_post['post_content'] = $description;
   if ($idsimport_import_user_id) {
     $updated_post['post_author'] = $idsimport_import_user_id;
   }
@@ -451,18 +581,18 @@ function idsimport_update_asset($post_id, $dataset, $post_type, $asset) {
   }
   $new_post_id  = wp_update_post($updated_post);
   if (is_admin() && IDS_IMPORT_VERBOSE_IMPORT) {
-    $output = $asset->title . ' (' . __('updated') . ') ';
+    $output = $title . ' - ' . __('updated');
     echo ids_div_field_wrapper('ids-item-output-importer', '', '', $output);
   }
   if ($new_post_id) {
-    update_post_meta($post_id, $object_id_field, $asset->object_id, TRUE);
+    update_post_meta($post_id, $object_id_field, $asset->object_id);
     // Extra fields that could not be present in 'short' responses.
-    if (isset($asset->site)) { update_post_meta($post_id, 'site', $asset->site, TRUE); }
-    if (isset($asset->timestamp)) { update_post_meta($post_id, 'timestamp', $asset->timestamp, TRUE); }
-    if (isset($asset->website_url)) { update_post_meta($post_id, 'website_url', $asset->website_url, TRUE); }
-    if (isset($asset->asset_id)) { update_post_meta($post_id, 'asset_id', $asset->asset_id, TRUE); }
-    if (isset($asset->date_created)) { update_post_meta($post_id, 'date_created', date_i18n(get_option('date_format'), $asset->date_created), TRUE); }
-    if (isset($asset->date_updated)) { update_post_meta($post_id, 'date_updated', date_i18n(get_option('date_format'), $asset->date_updated), TRUE); }
+    if (isset($asset->site)) { update_post_meta($post_id, 'site', $asset->site); }
+    if (isset($asset->timestamp)) { update_post_meta($post_id, 'timestamp', $asset->timestamp); }
+    if (isset($asset->website_url)) { update_post_meta($post_id, 'website_url', $asset->website_url); }
+    if (isset($asset->asset_id)) { update_post_meta($post_id, 'asset_id', $asset->asset_id); }
+    if (isset($asset->date_created)) { update_post_meta($post_id, 'date_created', $asset->date_created); }
+    if (isset($asset->date_updated)) { update_post_meta($post_id, 'date_updated', $asset->date_updated); }
     if (isset($asset->country_focus_array)) { idsimport_update_categories_post($post_id, $dataset, $countries_taxonomy, $asset->country_focus_array); }
     if (isset($asset->category_region_array)) { idsimport_update_categories_post($post_id, $dataset, $regions_taxonomy, $asset->category_region_array); }
     if (isset($asset->category_theme_array)) { idsimport_update_categories_post($post_id, $dataset, $themes_taxonomy, $asset->category_theme_array); }
@@ -471,28 +601,37 @@ function idsimport_update_asset($post_id, $dataset, $post_type, $asset) {
       if ($ids_api_key) {
         $metadata_url .= '?' . IDS_API_KEY_PAR . '=' . $ids_api_key;
       }
-      update_post_meta($post_id, 'metadata_url', $metadata_url, TRUE);
+      update_post_meta($post_id, 'metadata_url', $metadata_url);
     }
     if (($import_keywords) && (isset($asset->keywords))) {
       wp_set_post_tags($post_id, $asset->keywords, FALSE);
     }
     if ($post_type == 'ids_documents') {
     // Document-specific fields.
-      if (isset($asset->authors)) { idsimport_update_post_array_meta($post_id, 'authors', $asset->authors, TRUE); }
-      if (isset($asset->language_name)) { update_post_meta($post_id, 'language_name', $asset->language_name, TRUE); }
-      if (isset($asset->publication_date)) { update_post_meta($post_id, 'publication_date', $asset->publication_date, TRUE); }
-      if (isset($asset->licence_type)) { update_post_meta($post_id, 'licence_type', $asset->licence_type, TRUE); }
-      if (isset($asset->publisher)) { update_post_meta($post_id, 'publisher', $asset->publisher, TRUE); }
-      if (isset($asset->publisher_country)) { update_post_meta($post_id, 'publisher_country', $asset->licence_type, TRUE); }
-      if (isset($asset->urls)) { idsimport_update_post_array_meta($post_id, 'urls', $asset->urls, TRUE); }
+      if (isset($asset->authors)) { idsimport_update_post_array_meta($post_id, 'authors', $asset->authors); }
+      if (isset($asset->language_name)) { update_post_meta($post_id, 'language_name', $asset->language_name); }
+      if (isset($asset->publication_date)) { update_post_meta($post_id, 'publication_date', $asset->publication_date); }
+      if (isset($asset->licence_type)) { update_post_meta($post_id, 'licence_type', $asset->licence_type); }
+      if (isset($asset->publisher)) { update_post_meta($post_id, 'publisher', $asset->publisher); }
+      if (isset($asset->publisher_country)) { update_post_meta($post_id, 'publisher_country', $asset->licence_type); }
+      if (isset($asset->urls)) { idsimport_update_post_array_meta($post_id, 'urls', $asset->urls); }
+      foreach ($import_additional_languages as $lang_code) {
+        foreach (array('title', 'description') as $field) { // Iterate through the translatable fields. This could be generalised.
+          $field_name = $field . '_' . $lang_code;
+          $field_value = ids_get_translation($asset, $field, $lang_code, FALSE);
+          if ($field_value) {
+            update_post_meta($post_id, $field_name, $field_value);
+          }
+        }
+      }
     }
     elseif ($post_type == 'ids_organisations') {
     // Organisation-specific fields.
-      if (isset($asset->acronym)) { update_post_meta($post_id, 'acronym', $asset->acronym, TRUE); }
-      if (isset($asset->alternative_acronym)) { update_post_meta($post_id, 'alternative_acronym', $asset->alternative_acronym, TRUE); }
-      if (isset($asset->organisation_type)) { update_post_meta($post_id, 'organisation_type', $asset->organisation_type, TRUE); }
-      if (isset($asset->organisation_url)) { update_post_meta($post_id, 'organisation_url', $asset->organisation_url, TRUE); }
-      if (isset($asset->location_country)) { update_post_meta($post_id, 'location_country', $asset->location_country, TRUE); }
+      if (isset($asset->acronym)) { update_post_meta($post_id, 'acronym', $asset->acronym); }
+      if (isset($asset->alternative_acronym)) { update_post_meta($post_id, 'alternative_acronym', $asset->alternative_acronym); }
+      if (isset($asset->organisation_type)) { update_post_meta($post_id, 'organisation_type', $asset->organisation_type); }
+      if (isset($asset->organisation_url)) { update_post_meta($post_id, 'organisation_url', $asset->organisation_url); }
+      if (isset($asset->location_country)) { update_post_meta($post_id, 'location_country', $asset->location_country); }
     }
   }
   else {

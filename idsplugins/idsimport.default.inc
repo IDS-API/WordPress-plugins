@@ -10,8 +10,8 @@
 if (!defined('IDS_API_LIBRARY_PATH')) define('IDS_API_LIBRARY_PATH', 'idsapi/');
 if (!defined('IDS_API_ENVIRONMENT')) define('IDS_API_ENVIRONMENT', 'wordpress');
 
-define('IDS_IMPORT_DEFAULT_DATASET_PUBLIC', 'eldis');
-define('IDS_IMPORT_DEFAULT_DATASET_ADMIN', 'eldis');
+define('IDS_IMPORT_DEFAULT_DATASET_PUBLIC', 'all');
+define('IDS_IMPORT_DEFAULT_DATASET_ADMIN', 'all');
 define('IDS_IMPORT_IMPORT_USER', 'IDS');
 define('IDS_IMPORT_CATEGORY_LEVELS', 2);
 define('IDS_IMPORT_IMPORT_RECURRENCE_ASSETS', 'daily');
@@ -19,6 +19,8 @@ define('IDS_IMPORT_IMPORT_RECURRENCE_CATEGORIES', 'monthly');
 define('IDS_IMPORT_USER_EMAIL','api@ids.ac.uk');
 define('IDS_IMPORT_MENU_TITLE', 'IDS Import');
 define('IDS_IMPORT_TAXONOMY', 'idsimport_taxonomy');
+define('IDS_IMPORT_DEFAULT_LANGUAGE', 'en');
+define('IDS_IMPORT_UPDATED_ASSETS', 'keep');
 
 define('IDS_IMPORT_NEW_CATEGORIES', TRUE);
 define('IDS_IMPORT_MAP_CATEGORIES', FALSE);

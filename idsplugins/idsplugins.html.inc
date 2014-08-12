@@ -9,6 +9,9 @@ function ids_date_updated($before = '', $after = '') {
   global $post;
   $date = (isset($post->date_updated) ? $post->date_updated : get_post_meta($post->ID, 'date_updated', TRUE));
   if ($date) {
+    if (is_numeric($date)) { // for backwards compatibility.
+      $date = date_i18n(get_option('date_format'), $date);
+    }
     echo $before . $date . $after;
   }
 }
@@ -135,7 +138,7 @@ function ids_show_message($message, $visibility = 'block') {
 }
 
 // Generate select boxes.
-function  ids_select_box($select_name, $id, $items, $selected_value = '', $multiple = FALSE, $class = FALSE) {
+function  ids_select_box($select_name, $id, $items, $selected_values = array(), $multiple = FALSE, $class = FALSE) {
 	$html = "<select id='$id' name='$select_name'";
   if ($multiple) {
     $html .= ' multiple="multiple"';
@@ -148,7 +151,7 @@ function  ids_select_box($select_name, $id, $items, $selected_value = '', $multi
 	foreach($keys as $key) {
     $value = $items[$key];
     $html .= "<option value='$key' ";
-    if ($key == $selected_value) {
+    if (in_array($key, $selected_values)) {
       $html .= 'selected';
     }
     $html .= '>';

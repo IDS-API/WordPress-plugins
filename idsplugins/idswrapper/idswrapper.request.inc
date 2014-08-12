@@ -10,7 +10,7 @@
 class IdsApiRequest {
 
   // The number of results to return, as requested.
-  // Renamed in order to avoid confusion with the page size (the num_results parameter of the API).
+  // Renamed in order to avoid confusion with the page size (the num_results parameter of the API). "0" means "all".
   protected $num_requested = 0;
 
   // The size of each page requested. It is equivalent to the API 'num_results' field.
@@ -21,7 +21,7 @@ class IdsApiRequest {
 
   // The age of results to return (not older than the number of days specified by this attribute).
   // If not specified it is ignored.
-  protected $age_results;
+  protected $age_results = IDS_API_AGE_NEW_ASSETS;
 
   // IDS API token guid (key)
   protected $api_key;
@@ -29,8 +29,8 @@ class IdsApiRequest {
   // From where to get the information: eldis, bridge. Default is the defined default (eldis).
   protected $site = IDS_API_DEFAULT_DATASET;
 
-  // Type of request.
-  protected $type_request = 'search';
+  // Type of request (search, get, get_all).
+  protected $type_request = IDS_API_DEFAULT_TYPE_REQUEST;
 
   // Identifier of the object being requested.
   protected $object_id;
@@ -38,8 +38,11 @@ class IdsApiRequest {
   // Type of object(s) requested: assets, documents, organisations, themes, regions, countries
   protected $object_type;
 
+  // Type of category for count requests (country, region, theme, subject or keyword).
+  protected $count_category;
+
   // Format of the response: id, short, full. If not specified, the defined default (short) is used.
-  protected $format = IDS_API_DEFAULT_FORMAT;
+  protected $format;
 
   // Parameters to be added to the request. Use IdsApiRequest->setParam() to set.
   protected $params = array();
@@ -51,20 +54,35 @@ class IdsApiRequest {
   protected $url;
 
   /**
-  * Constructor.
-  * The search parameters are added later, calling to IdsApiRequest->setSearchParam() (for 'search' requests).
-  * @param string $type_request - type of request ('search', 'get', 'get_all').
-  * @param string $object_type - type of object(s) requested (documents, organisations, themes, regions, countries).
-  * @param string $format - format of the responses (short, full) (default 'full').
-  * @param string $site - dataset from where to retrieve the information (eldis, bridge).
+  * Set the token guid of the items to request.
   * @param string $api_key - IDS API token guid.
   */
-  function __construct($type_request, $object_type, $format, $site, $api_key) {
-    $this->type_request = $type_request;
-    $this->object_type = $object_type;
-    $this->format = $format;
-    $this->site = $site;
+  public function setApiKey($api_key) {
     $this->api_key = $api_key;
+  }
+
+  /**
+  * Set the format of the response.
+  * @param string $format - format of the response (id, short, full).
+  */
+  public function setFormat($format) {
+    $this->format = $format;
+  }
+
+  /**
+  * Set the type of the request.
+  * @param string $type_request - type of the request (search, get, get_all).
+  */
+  public function setTypeRequest($type_request) {
+    $this->type_request = $type_request;
+  }
+
+  /**
+  * Set the offset for the request.
+  * @param int $start_offset - offset for the results of the request.
+  */
+  public function setOffset($start_offset) {
+    $this->start_offset = $start_offset;
   }
 
   /**
@@ -73,6 +91,22 @@ class IdsApiRequest {
   */
   public function setObjectId($object_id) {
     $this->object_id = $object_id;
+  }
+
+  /**
+  * Set the object type of the items to request.
+  * @param string $object_type - object_type of the objects to be retrieved.
+  */
+  public function setObjectType($object_type) {
+    $this->object_type = $object_type;
+  }
+
+  /**
+  * Set the category in count requests.
+  * @param string $count_category - category (theme, region, country, keyword, subject).
+  */
+  public function setCountCategory($count_category) {
+    $this->count_category = $count_category;
   }
 
   /**
@@ -89,6 +123,14 @@ class IdsApiRequest {
   */
   public function setAgeResults($age_results) {
     $this->age_results = $age_results;
+  }
+
+  /**
+  * Set the dataset.
+  * @param string $site - dataset from where to retrieve the information (eldis, bridge).
+  */
+  public function setSite($site) {
+    $this->site = $site;
   }
 
   /**
@@ -141,6 +183,30 @@ class IdsApiRequest {
   }
 
   /**
+  * Get the id of object requested.
+  * @return string - id of object requested.
+  */
+  public function getObjectId() {
+    return $this->object_id;
+  }
+
+  /**
+  * Get the count category in count requests
+  * @return string - count category (country, region, theme, subject, keyword).
+  */
+  public function getCountCategory() {
+    return $this->count_category;
+  }
+
+  /**
+  * Get the type of the request.
+  * @return string - type of the request.
+  */
+  public function getTypeRequest() {
+    return $this->type_request;
+  }
+
+  /**
   * Get the dataset from where items are requested.
   * @return string - dataset to request from (eldis, bridge).
   */
@@ -149,19 +215,27 @@ class IdsApiRequest {
   }
 
   /**
+  * Get the offset for the request.
+  * @return int - offset of the request.
+  */
+  public function getOffset() {
+    return $this->start_offset;
+  }
+
+  /**
   * Builds the request URL, including the key and encoding the query string.
   * Format of the URL calls:
   * Get:     {base_url}/{site}/get/{object type}/{object id}/{format}?{key}
   * Get all: {base_url}/{site}/get_all/{object_type}/{format}?{key}
   * Search:  {base_url}/{site}/search/{object type}/{format}?{key}&{query}
-  * Count: {base_url}/{site}/count/{object type}?{key}&{query}
+  * Count: {base_url}/{site}/count/{object type}/{count_category}?{key}&{query}
   */
   public function setUrl() {
     $query_string = $this->queryString();
     $this->url = IDS_API_URL;
     $api_key_par = IDS_API_KEY_PAR;
     $this->url .= $this->setPath() . '?' . $api_key_par . '=' . $this->api_key;
-    if (($this->type_request === 'search') || ($this->type_request === 'get_all')) { 
+    if (($this->type_request == 'search') || ($this->type_request == 'get_all') || ($this->type_request == 'count')) { 
       if ($this->age_results) {
         $timestr = '- ' . $this->age_results . ' days';
         $date = strtotime($timestr);
@@ -171,12 +245,14 @@ class IdsApiRequest {
       if ($query_string) {
         $this->url .= '&' . $query_string;
       }
-      $this->setPageSize();
-      if ($this->page_size) {
-        $this->url .= '&' . 'num_results=' . $this->page_size;
-      }
-      if ($this->start_offset) {
-        $this->url .= '&' . 'start_offset=' . $this->start_offset;
+      if (($this->type_request == 'search') || ($this->type_request == 'get_all')) {
+        $this->setPageSize();
+        if ($this->page_size) {
+          $this->url .= '&' . 'num_results=' . $this->page_size;
+        }
+        if ($this->start_offset) {
+          $this->url .= '&' . 'start_offset=' . $this->start_offset;
+        }
       }
     }
   }
@@ -216,6 +292,9 @@ class IdsApiRequest {
     }  
     if (isset($this->object_type)) {
       $path .= '/' . $this->object_type;
+    }
+    if (isset($this->count_category)) {
+      $path .= '/' . $this->count_category;
     } 
     if (isset($this->object_id)) {
       $path .= '/' . $this->object_id;

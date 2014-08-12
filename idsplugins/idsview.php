@@ -3,7 +3,7 @@
 Plugin Name: IDS View
 Plugin URI: http://api.ids.ac.uk/category/plugins/
 Description: Displays documents from the IDS collection via the IDS Knowledge Services API.
-Version: 0.1
+Version: 1.1
 Author: Pablo Accuosto for the Institute of Development Studies (IDS)
 Author URI: http://api.ids.ac.uk/
 License: GPLv3
@@ -24,10 +24,14 @@ License: GPLv3
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+if (!defined('IDS_API_LIBRARY_PATH')) define('IDS_API_LIBRARY_PATH', dirname(__FILE__) . '/idswrapper/');
+if (!defined('IDS_API_ENVIRONMENT')) define('IDS_API_ENVIRONMENT', 'wordpress');
+
 require_once('idsview.default.inc');
-require_once(IDS_API_LIBRARY_PATH . 'idsapi.wrapper.inc');
+require_once(IDS_API_LIBRARY_PATH . 'idswrapper.wrapper.inc');
 
 require_once('idsplugins.customtypes.inc');
+require_once('idsplugins.functions.inc');
 require_once('idsplugins.html.inc');
 require_once('idsview.admin.inc');
 require_once('idsview.widget.inc');
@@ -46,6 +50,7 @@ add_action('wp_enqueue_scripts', 'idsview_add_stylesheet');
 add_action('admin_enqueue_scripts', 'idsview_add_stylesheet');
 add_action('admin_enqueue_scripts', 'idsview_add_javascript');
 add_filter('query_vars', 'idsview_query_vars' );
+add_filter('get_pagenum_link', 'idsview_append_offset');
 add_filter('the_permalink', 'idsview_asset_permalink');
 add_filter('the_content', 'idsview_asset_content');
 
@@ -65,9 +70,9 @@ function idsview_activate() {
         if (!$page_exists) {
           $page_title = ucfirst($dataset) . ' ' . ucfirst($asset_type);
           $page_template = 'idsview_' . $dataset . '_' . $asset_type . '.php';
-          $page_content = __('The ') . $asset_type . __(' displayed on this page are retrieved from the IDS collections by the IDS View plugin.') . '<br/>';
+          $page_content = sprintf(__('The %s displayed on this page are retrieved from the IDS collections by the IDS View plugin.'), $asset_type) . '<br/>';
           $page_content .= __('You can edit this page as any other regular WordPress page, but please make sure to keep it associated with a template that includes a call to the function idsview_assets() to make sure that the retrieved documents are included in the page.') . '<br/>';
-          $page_content .= __('For an example, please take a look at the template ') . 'idsview_' . $dataset . '_' . $asset_type . '.php' . __(', included with the plugin.');
+          $page_content .= sprintf(__('For an example, please take a look at the template %s, included with the plugin.'), 'idsview_' . $dataset . '_' . $asset_type . '.php');
           $page_content = '<em><small>' . $page_content . '</small></em>';
           $page = array(
             'post_title'    => $page_title,
@@ -391,13 +396,41 @@ function idsview_query_vars($query_vars) {
   $query_vars[] = 'country';
   $query_vars[] = 'region';
   $query_vars[] = 'theme';
+  $query_vars[] = 'ids_offset';
   return $query_vars;
+}
+
+function idsview_append_offset($link) {
+  global $wp_query;
+  $current_page_num = (get_query_var('paged')) ? get_query_var('paged') : 1;
+  $ids_offset = (get_query_var('ids_offset')) ? get_query_var('ids_offset') : 0;
+  $prev_offset = (get_query_var('prev_offset')) ? get_query_var('prev_offset') : 0;
+  $num_excluded = (get_query_var('num_excluded')) ? get_query_var('num_excluded') : 0;
+  $posts_per_page = (get_query_var('posts_per_page')) ? get_query_var('posts_per_page') : 1;
+  parse_str($link, $query_array);
+  if (isset($query_array['paged'])) {
+    $linked_page_num = $query_array['paged'];
+  }
+  else {
+    $linked_page_num = 0;
+  }
+  if ($linked_page_num == $current_page_num + 1) {
+    $offset = $ids_offset;
+  }
+  elseif ($linked_page_num == $current_page_num - 1) {
+    $offset = ($prev_offset > $posts_per_page+$num_excluded) ? $prev_offset-($posts_per_page+$num_excluded) : 0;
+  }
+  else {
+    $offset = $posts_per_page*$linked_page_num;
+  }
+  $link = add_query_arg('ids_offset', $offset, $link);
+  return $link;
 }
 
 function idsview_asset_permalink($link) {
   global $post;
   if (isset($post->object_id)) {
-    $link = $link . '&object_id=' . $post->object_id;
+    $link = add_query_arg('object_id', $post->object_id, $link);
   }
   return $link;
 }
@@ -421,7 +454,7 @@ function idsview_assets($dataset, $type) {
     $object_id = $wp_query->query_vars['object_id'];
     $response = idsview_get_single($dataset, $type, $object_id);
     if ($response) {
-      $assets = $response->results;
+      $assets = $response->getResults();
       if (!empty($assets)) {
         $posts[] = idsview_create_post($dataset, $assets[0], $type);
         $wp_query->post = $posts[0];
@@ -436,7 +469,12 @@ function idsview_assets($dataset, $type) {
   else { // It's a general request.
     $filters = array();
     $posts_per_page = $wp_query->query_vars['posts_per_page'];
-    $paged = $wp_query->query_vars['paged'];
+    if (isset($wp_query->query_vars['ids_offset'])) {
+      $offset = $wp_query->query_vars['ids_offset'];
+    }
+    else {
+      $offset = 0;
+    }
     if (isset($wp_query->query_vars['country'])) {
       $filters['country'] = $wp_query->query_vars['country'];
     }
@@ -446,35 +484,56 @@ function idsview_assets($dataset, $type) {
     if (isset($wp_query->query_vars['theme'])) {
       $filters['theme'] = $wp_query->query_vars['theme'];
     }
-    $response = idsview_get_assets($dataset, $type, $posts_per_page, $paged, $filters);
-    if ($response) {
-      $assets = $response->results;
-      if (!empty($assets)) {
-        foreach ($assets as $asset) {
-          $posts[] = idsview_create_post($dataset, $asset, $type);
+    $num_retrieved = 0;
+    $num_excluded = 0;
+    $total_results = 0;
+    $more_results = TRUE;
+    $prev_offset = $offset;
+    while (($num_retrieved < $posts_per_page) && $more_results) {
+      $response = idsview_get_assets($dataset, $type, $posts_per_page, $offset, $filters);
+      if ($response) {
+        $assets = $response->getResults();
+        if (!empty($assets)) {
+          foreach ($assets as $asset) {
+            if (ids_exclude_asset('idsview', $asset)) {
+              $num_excluded++;
+            }
+            else {
+              $posts[] = idsview_create_post($dataset, $asset, $type);
+              $num_retrieved++;
+            }
+            $offset++; 
+            if ($num_retrieved == $posts_per_page) {
+              break;
+            }
+          }
+          $total_results = $response->getTotalResults();
+          $more_results = ($total_results > $offset);
+        }
+        else {
+          $more_results = FALSE;
         }
       }
-      if (!empty($posts)) {
-        $num_found = count($posts)*2; //TODO. Set the actual number of items (metadata - total_results)
-        $wp_query->posts = $posts;
-        $wp_query->found_posts = $num_found;
-        $wp_query->post_count = count($posts);
-        $wp_query->post = $posts[0];
-        $wp_query->is_page = FALSE;
-        $wp_query->is_archive = TRUE;
-        $wp_query->queried_object = NULL;
-        $wp_query->queried_object_id = NULL;
-        $wp_query->max_num_pages = 50; //Set a real value.
-      }
+    }
+    if (!empty($posts)) {
+      $wp_query->posts = $posts;
+      $wp_query->found_posts = $total_results;
+      $wp_query->post_count = $num_retrieved;
+      $wp_query->post = $posts[0];
+      $wp_query->is_page = FALSE;
+      $wp_query->is_archive = TRUE;
+      $wp_query->queried_object = NULL;
+      $wp_query->queried_object_id = NULL;
+      $wp_query->max_num_pages = round($total_results/$posts_per_page, 0);
+      $wp_query->set('ids_offset', $offset);
+      $wp_query->set('prev_offset', $prev_offset);
+      $wp_query->set('num_excluded', $num_excluded);
     }
   }
+  if (IDS_VIEW_DISPLAY_ERRORS) {
+    idsapi_report_errors();
+  }
 }
-
-//TODO. Define this function.
-function idsview_excerpt_post($content) {
-  return $content;
-}
-
 
 // Posts that hold the retrieved content.
 function idsview_create_post($dataset, $asset, $type) {
@@ -487,20 +546,23 @@ function idsview_create_post($dataset, $asset, $type) {
   }
   $url = $dataset . 'view_' . $type;
   $post_name = sanitize_title($asset->title);
+  $default_language = idsapi_variable_get('idsview', 'language', IDS_VIEW_DEFAULT_LANGUAGE);
+  $title = ids_get_translation($asset, 'title', $default_language);
+  $description = ids_get_translation($asset, 'description', $default_language);
   $post = array (
             'ID' => $id,
             'post_author' => 1,
-            'post_date' => $asset->date_created,
-            'post_date_gmt' => $asset->date_created,
-            'post_content' => $asset->description,
-            'post_title' => $asset->title,
-            'post_excerpt' => idsview_excerpt_post($asset->description),
+            'post_date' => date_i18n('Y-m-d H:i:s', $asset->date_created),
+            'post_date_gmt' => get_gmt_from_date(date_i18n('Y-m-d H:i:s', $asset->date_created)),
+            'post_content' => $description,
+            'post_title' => $title,
+            'post_excerpt' => ids_excerpt_post('idsview', $description),
             'post_status' => 'publish',
             'comment_status' => 'closed',
             'ping_status' => 'closed',
             'post_name' => $post_name,
-            'post_modified' => $asset->date_updated,
-            'post_modified_gmt' => $asset->date_updated,
+            'post_modified' => date_i18n('Y-m-d H:i:s', $asset->date_updated),
+            'post_modified_gmt' => get_gmt_from_date(date_i18n('Y-m-d H:i:s', $asset->date_updated)),
             'post_parent' => 0,
             'guid' => home_url($url) . '/' . $post_name,
             'menu_order' => 0,
@@ -546,8 +608,8 @@ function idsview_get_single($dataset, $type, $object_id) {
     $api_key = idsapi_variable_get('idsview', 'api_key', FALSE);
     $response = $idsapi->get($type, $dataset, $api_key, 'full', $object_id);
     if ($response->isError()) {
-      $error_message = __('No content retrieved by the API call. ') . $response->errorMessage();
-      idsapi_register_error('idsview', $error_message, 'IDS_Importer::retrieve_content', 'warning');
+      $error_message = __('No content retrieved by the API call. ') . $response->getErrorMessage();
+      idsapi_register_error('idsview', $error_message, 'idsview_get_single', 'warning');
     }
   }
   else {
@@ -557,14 +619,13 @@ function idsview_get_single($dataset, $type, $object_id) {
 }
 
 // Call the IDS API to retrieve a set of assets.
-function idsview_get_assets($dataset, $assets_type, $posts_per_page, $paged, $filters = array()) {
+function idsview_get_assets($dataset, $assets_type, $num_items, $offset, $filters = array()) {
   $idsapi = new IdsApiWrapper;
   $response = FALSE;
   $api_key_validated = idsapi_variable_get('idsview', 'api_key_validated', FALSE);
   if ($api_key_validated) {
     $filter_params = array();
     $api_key = idsapi_variable_get('idsview', 'api_key', FALSE);
-    $num_items = $posts_per_page;
     $age_results = idsapi_variable_get('idsview', 'age_new_assets', IDS_API_AGE_NEW_ASSETS);
     $view_query = idsapi_variable_get('idsview', 'view_query', '');
     if (isset($filters['country'])) {
@@ -603,13 +664,13 @@ function idsview_get_assets($dataset, $assets_type, $posts_per_page, $paged, $fi
     if (!empty($themes_assets)) {
       $filter_params['theme'] = implode('|', $themes_assets);
     }
-    if ($paged > 1) {
-      $offset = ($paged-1) * $posts_per_page;
+    if ($offset) {
       $filter_params['start_offset'] = $offset;
     }
     if ($assets_type == 'documents') { // Document-specific filters
       $authors_assets = idsapi_variable_get('idsview', 'view_authors_assets', '');
       $publishers_assets = idsapi_variable_get('idsview', 'view_publishers_assets', '');
+      $language_name_codes = idsapi_variable_get('idsview', 'language_name_codes', array());
       if ($authors_assets) {
         $authors = explode(',', $authors_assets);
         $list_authors = implode('|', array_map('trim', $authors));
@@ -620,11 +681,24 @@ function idsview_get_assets($dataset, $assets_type, $posts_per_page, $paged, $fi
         $list_publishers = implode('|', array_map('trim', $publishers));
         $filter_params['publisher_name'] = $list_publishers;
       }
+      if ($language_name_codes) {
+        $ids_languages = ids_languages();
+        $list_language_names = array();
+        foreach ($language_name_codes as $language_code) {
+          if (isset($ids_languages[$language_code])) {
+            $list_language_names[] = $ids_languages[$language_code]; 
+          }
+          if ($list_language_names) {
+            $language_names = implode('|', $list_language_names);
+            $filter_params['language_name'] = $language_names;
+          }
+        }
+      }
     }
     $response = $idsapi->search($assets_type, $dataset, $api_key, 'full', $num_items, $age_results, $filter_params);
     if ($response->isError()) {
-      $error_message = __('No content retrieved by the API call. ') . $response->errorMessage();
-      idsapi_register_error('idsview', $error_message, 'IDS_Importer::retrieve_content', 'warning');
+      $error_message = __('No content retrieved by the API call. ') . $response->getErrorMessage();
+      idsapi_register_error('idsview', $error_message, 'idsview_get_assets', 'warning');
     }
   }
   else {

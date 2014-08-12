@@ -20,9 +20,9 @@ $idsapi_errors = array();
 
 // Call the URL.
 function idsapi_get_data($url) {
-  $response = wp_remote_get($url);
+  $response = wp_remote_get($url, array('timeout' => 60));
   if (is_wp_error($response)) {
-    $data = $response->getErrorMessage();
+    $data = $response->get_error_message();
   }
   else {
     $data = json_decode($response['body'], true);

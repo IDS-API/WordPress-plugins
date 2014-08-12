@@ -14,9 +14,10 @@ function changeImportSettings() {
   }
 }
 
-function changeDataset(selected_dataset) {
+function changeDataset() {
+  selected_dataset = $jqorig("#radio_dataset input[type='radio']:checked").val();
   $jqorig.each(['eldis', 'bridge'], function(i, dataset) { 
-    if ((dataset == selected_dataset) || (selected_dataset == 'both')) {
+    if ((dataset == selected_dataset) || (selected_dataset == 'all')) {
       $jqorig('.ids-categories-' + dataset).show();
       if ($jqorig("#ids_map_categories").prop("checked")) {
         $jqorig('.ids-mappings-' + dataset).show();
@@ -36,6 +37,7 @@ function changeMappingsSettings() {
   else {
     $jqorig(".ids-categories-mapping").hide();
   }
+  changeDataset();
 }
 
 function changeNewCategories() {
@@ -243,11 +245,9 @@ function loadAdminPage() {
 		$jqorig(".ui-tabs").tabs({ fx: { opacity: "toggle", duration: "fast" } });
 	});
   initCategoriesArrays();
-  changeImportSettings();
   populateSelectBoxes();
   changeMappingsSettings();
   changeNewCategories();
-  changeDataset(default_dataset);
   $jqorig("#ids_import_user_select").change(updateUsername); 
   $jqorig("#ids_import_user").change(updateDefaultUser);
 }

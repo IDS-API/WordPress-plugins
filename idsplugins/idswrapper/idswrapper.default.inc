@@ -20,6 +20,7 @@ define('IDS_API_HTML_ERRORS', TRUE);
 define('IDS_API_DEFAULT_DATASET', 'eldis');
 define('IDS_API_NUM_ITEMS', 20); 
 define('IDS_API_DEFAULT_FORMAT', 'full');
+define('IDS_API_DEFAULT_TYPE_REQUEST', 'search');
 define('IDS_API_AGE_NEW_ASSETS', 0);
 
 // Parameters that shouldn't be changed by the API users, in general
@@ -30,8 +31,7 @@ define('IDS_API_DOCUMENTATION_URL', 'http://api.ids.ac.uk/docs/');
 define('IDS_API_SEARCH_FIELDS_URL', 'http://api.ids.ac.uk/docs/functions/search/');
 define('IDS_API_MAX_NUM_ITEMS', 500); // IDS_API_MAX_NUM_ITEMS is the max. page size allowed by the API (http://api.ids.ac.uk/docs/)
 define('IDS_API_KEY_PAR', '_token_guid');
-define('IDS_API_DEFAULT_TYPE_REQUEST', 'search');
-define('IDS_API_CSS_OBJECT', 'ids_object');
+define('IDS_API_CSS_OBJECT', 'ids-object');
 define('IDS_API_PREFIX', 'IDS');
 
 

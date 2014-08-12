@@ -3,7 +3,7 @@
 Plugin Name: IDS Import
 Plugin URI: http://api.ids.ac.uk/category/plugins/
 Description: Imports content from the IDS collection via the IDS Knowledge Services API.
-Version: 1.0
+Version: 1.1
 Author: Pablo Accuosto for the Institute of Development Studies (IDS)
 Author URI: http://api.ids.ac.uk/
 License: GPLv3
@@ -24,10 +24,14 @@ License: GPLv3
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+if (!defined('IDS_API_LIBRARY_PATH')) define('IDS_API_LIBRARY_PATH', dirname(__FILE__) . '/idswrapper/');
+if (!defined('IDS_API_ENVIRONMENT')) define('IDS_API_ENVIRONMENT', 'wordpress');
+
 require_once('idsimport.default.inc');
-require_once(IDS_API_LIBRARY_PATH . 'idsapi.wrapper.inc');
+require_once(IDS_API_LIBRARY_PATH . 'idswrapper.wrapper.inc');
 
 require_once('idsplugins.customtypes.inc');
+require_once('idsplugins.functions.inc');
 require_once('idsimport.interface.inc');
 require_once('idsimport.metadata.inc');
 require_once('idsimport.admin.inc');

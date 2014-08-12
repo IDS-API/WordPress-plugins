@@ -64,7 +64,7 @@ function idsimport_new_user($username) {
 function idsimport_get_datasets() {
   global $ids_datasets;
   $default_dataset = idsapi_variable_get('idsimport', 'default_dataset', IDS_IMPORT_DEFAULT_DATASET_ADMIN);
-  if ($default_dataset == 'both') {
+  if ($default_dataset == 'all') {
     $datasets = $ids_datasets;
   }
   else {
@@ -76,11 +76,24 @@ function idsimport_get_datasets() {
 function idsimport_display_datasets($area) {
   global $ids_datasets;
   $display_dataset = array();
-  $datasets = $ids_datasets;
-  $display_dataset['admin'] = idsapi_variable_get('idsimport', 'display_dataset_admin', IDS_IMPORT_DEFAULT_DATASET_ADMIN);
+  //$datasets = $ids_datasets;
+  //$display_dataset['admin'] = idsapi_variable_get('idsimport', 'display_dataset_admin', IDS_IMPORT_DEFAULT_DATASET_ADMIN);
+  $display_dataset['admin'] = idsapi_variable_get('idsimport', 'default_dataset', IDS_IMPORT_DEFAULT_DATASET_ADMIN);
   $display_dataset['public'] = idsapi_variable_get('idsimport', 'display_dataset_public', IDS_IMPORT_DEFAULT_DATASET_PUBLIC);
-  if (isset($display_dataset[$area]) && ($display_dataset[$area] != 'both')) {
-    $datasets = array($display_dataset[$area]);
+  if (isset($display_dataset[$area])) {
+    switch($display_dataset[$area]) {
+      case 'all':
+        $datasets = $ids_datasets;
+        break;
+      case 'none':
+        $datasets = array();
+        break;
+      default:
+        $datasets = array($display_dataset[$area]);
+    }
+  }
+  else {
+    $datasets = array();
   }
   return $datasets;
 }
@@ -142,6 +155,16 @@ function idsimport_validate_options($input) {
         $error_message .= ' ' . $input['num_items'] . __(' is not a valid number of items to import. Please enter a numeric value.');
         $input['num_items'] = IDS_API_NUM_ITEMS;
       }
+    }
+    if (isset($input['excerpt_length'])) {
+      if (!is_numeric($input['excerpt_length'])) {
+        $error = TRUE;
+        $error_message .= ' ' . $input['excerpt_length'] . __(' is not a valid length. Please enter a numeric value.');
+        $input['excerpt_length'] = 0;
+      }
+    }
+    if (isset($input['exclude_uris'])) {
+      $input['exclude_uris'] = wp_kses($input['exclude_uris'], $allowed_html);
     }
     if (isset($input['import_authors_assets'])) {
       $input['import_authors_assets'] = wp_kses($input['import_authors_assets'], $allowed_html);

@@ -31,7 +31,6 @@ class IdsApiObject {
   public $website_url;
 
   // Name of the object.
-  // [Is name = title always???]
   public $name;
 
   /**
@@ -49,10 +48,18 @@ class IdsApiObject {
         return new IdsApiObjectAssetOrganisation($object);
       case 'themes':
         return new IdsApiObjectCategory($object);
+      case 'subjects':
+        return new IdsApiObjectCategory($object);
       case 'regions':
         return new IdsApiObjectCategory($object);
       case 'countries':
         return new IdsApiObjectCountry($object);
+      case 'country_count':
+      case 'theme_count':
+      case 'region_count':
+      case 'subject_count':
+      case 'keyword_count':
+        return new IdsApiCount($object, $object_type);
       default:
         return new IdsApiObject($object);
     }
@@ -85,6 +92,9 @@ class IdsApiObject {
     elseif (isset($object['object_name'])) {
       $this->name = $object['object_name'];
     }
+    else {
+      $this->name = $this->title;
+    }
   }
 
 }
@@ -108,6 +118,9 @@ abstract class IdsApiObjectAsset extends IdsApiObject {
 
   // Themes. Array of themes (IdsObjectCategory). Thematic categories which apply to the document or organisation.
   public $category_theme_array;
+
+  // Subjects. Array of subjects (IdsObjectCategory). Subject-based categories which apply to the document or organisation.
+  public $category_subject_array;
 
   // Regions. Array of regions (IdsApiObjectCategory). Regions in which the organisation operates or which apply to the document.
   public $category_region_array;
@@ -138,6 +151,9 @@ abstract class IdsApiObjectAsset extends IdsApiObject {
     }
     if (isset($object['category_theme_array'])) {
       $this->category_theme_array = build_array_categories($object['category_theme_array']);
+    }
+    if (isset($object['category_subject_array'])) {
+      $this->category_subject_array = build_array_categories($object['category_subject_array']);
     }
     if (isset($object['category_region_array'])) {
       $this->category_region_array = build_array_categories($object['category_region_array']);;
@@ -181,6 +197,7 @@ class IdsApiObjectAssetDocument extends IdsApiObjectAsset {
   public $date_created;
   public $date_updated;
   public $category_theme_array;
+  public $category_subject_array;
   public $category_region_array;
   public $country_focus_array;
   public $keyword;
@@ -192,6 +209,15 @@ class IdsApiObjectAssetDocument extends IdsApiObjectAsset {
 
   // Language. String. The language in which the title, headline and description are written.
   public $language_name;
+
+  // Language ID. Int. The language in which the title, headline and description are written (language IDS numeric code corresponding to language_name).
+  public $language_id;
+
+  // Metadata languages. Languages (two-letter code) in which the translatable metadata (title, description) is available. Array of strings.
+  public $metadata_languages;
+
+  // Language array. Holds translatable metadata (title, description) in all available languages.
+  public $language_array;
 
   // Publication date. Date (example: 2004-01-01 00:00:00). Year that the research document was first published.
   public $publication_date;
@@ -226,6 +252,15 @@ class IdsApiObjectAssetDocument extends IdsApiObjectAsset {
     }
     if (isset($object['language_name'])) {
       $this->language_name = $object['language_name'];
+    }
+    if (isset($object['language_id'])) {
+      $this->language_id = $object['language_id'];
+    }
+    if (isset($object['metadata_languages'])) {
+      $this->metadata_languages = $object['metadata_languages'];
+    }
+    if (isset($object['language_array'])) {
+      $this->language_array = build_array_languages($object['language_array']);
     }
     if (isset($object['publication_date'])) {
       $this->publication_date = strtotime($object['publication_date']);
@@ -275,6 +310,7 @@ class IdsApiObjectAssetOrganisation extends IdsApiObjectAsset {
   public $date_created;
   public $date_updated;
   public $category_theme_array;
+  public $category_subject_array;
   public $category_region_array;
   public $country_focus_array;
   public $keyword;
@@ -357,7 +393,7 @@ class IdsApiObjectCategory extends IdsApiObject {
   // Level of the category in the hierarchy.
   public $level;
 
-  // Numerical code of the parent category. Example: 34.
+  // Numerical code of the parent category. Example: 34. [This is no longer included in the API response?].
   public $cat_parent;
 
   // Object Id of the parent category. Example: C34.
@@ -383,11 +419,14 @@ class IdsApiObjectCategory extends IdsApiObject {
     if (isset($object['level'])) {
       $this->level = $object['level'];
     }
+    if (isset($object['parent_object_id'])) {
+      $this->parent_object_id = $object['parent_object_id'];
+    }
     if (isset($object['cat_parent'])) {
       $this->cat_parent = $object['cat_parent'];
     }
-    if (isset($object['parent_object_id'])) {
-      $this->parent_object_id = $object['parent_object_id'];
+    elseif (isset($object['parent_object_id'])) {
+      $this->cat_parent = preg_replace('/[a-zA-Z]*(\d+)/', '$1', $this->parent_object_id);
     }
     if (isset($object['cat_superparent'])) {
       $this->cat_superparent = $object['cat_superparent'];
@@ -470,11 +509,51 @@ class IdsApiObjectCountry extends IdsApiObject {
 
 }
 
+/**
+ * IdsApiCount class.
+ *
+ * Objects of this class hold one result of a count request.
+ *
+ */
+class IdsApiCount {
+
+  // Number of responses corresponding to the category.
+  public $count;
+
+  // This is an IdsApiObject representing the category (in the case of theme, subject and region IdsApiObjectCategory and for country IdsApiObjectCountry).
+  public $item;
+
+  /**
+   * Constructor.
+   */
+  function __construct($object, $type) {
+    if (isset($object['count'])) {
+      $this->count = $object['count'];
+    }
+    switch ($type) {
+      case 'country_count':
+        $this->item = new IdsApiObjectCountry($object);
+        break;
+      case 'theme_count':
+      case 'region_count':
+      case 'subject_count':
+        $this->item = new IdsApiObjectCategory($object);
+        break;
+      default:
+        $this->item = new IdsApiObject($object);
+        break;
+    }
+  }
+
+}
+
+
+
 /* --------------------------- Helper functions ------------------------- */
 
 function build_array_categories($array_categories) {
   $categories = array();
-  foreach (current($array_categories) as $key => $category) {
+  foreach (current($array_categories) as $category) {
     $categories[] = new IdsApiObjectCategory($category);
   }
   return $categories;
@@ -482,7 +561,7 @@ function build_array_categories($array_categories) {
 
 function build_array_countries($array_countries) {
   $countries = array();
-  foreach (current($array_countries) as $key => $country) {
+  foreach (current($array_countries) as $country) {
     $countries[] = new IdsApiObjectCountry($country);
   }
   return $countries;
@@ -490,10 +569,23 @@ function build_array_countries($array_countries) {
 
 function build_array_organisations($array_organisations) {
   $organisations = array();
-  foreach (current($array_organisations) as $key => $organisation) {
+  foreach (current($array_organisations) as $organisation) {
     $organisations[] = new IdsApiObjectAssetOrganisation($organisation);
   }
   return $organisations;
+}
+
+function build_array_languages($language_array) {
+  $languages = array();
+  foreach (current($language_array) as $language) {
+    if (isset($language['isocode'])) {
+      $languages[$language['isocode']] = array();
+      foreach ($language as $field => $value) {
+        $languages[$language['isocode']][$field] = $value;
+      }      
+    }
+  }
+  return $languages;
 }
 
 

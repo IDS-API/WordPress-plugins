@@ -235,8 +235,12 @@ function idsimport_importer_form() {
       <th scope="row"><?php _e('General settings'); ?></th>
       <td>
         <ul>
-          <li> <?php echo '<i>' . __('Import from: ') . '</i>' . '<strong>' . (($default_dataset == 'both') ? __('Both Eldis and Bridge') : ucfirst($default_dataset)) . '</strong>'; ?>
-          <li> <?php echo '<i>' . __('Number of documents/organisations: ') . '</i>' . '<strong>' . idsapi_variable_get('idsimport', 'num_items', IDS_API_NUM_ITEMS) . '</strong>'; ?>
+          <li> <?php echo '<i>' . __('Import from: ') . '</i>' . '<strong>' . (($default_dataset == 'all') ? __('All sources') : ucfirst($default_dataset)) . '</strong>'; ?>
+          <li> <?php echo '<i>' . __('Number of documents/organisations: ') . '</i>' . '<strong>' . (($num_items = idsapi_variable_get('idsimport', 'num_items', IDS_API_NUM_ITEMS)) ? $num_items : 'Not specified') . '</strong>'; ?>
+          <li> <?php echo '<i>' . __('Default language: ') . '</i>' . '<strong>' . idsapi_variable_get('idsimport', 'language', IDS_IMPORT_DEFAULT_LANGUAGE) . '</strong>'; ?>
+          <li> <?php echo '<i>' . __('Additional languages: ') . '</i>' . '<strong>' . (($additional_languages = idsapi_variable_get('idsimport', 'additional_languages', array())) ? implode(', ', $additional_languages) : 'None') . '</strong>'; ?>
+          <li> <?php echo '<i>' . __('Updated resources: ') . '</i>' . '<strong>' . idsapi_variable_get('idsimport', 'updated_assets', IDS_IMPORT_UPDATED_ASSETS) . '</strong>'; ?>
+          <li> <?php echo '<i>' . __('Excerpts length: ') . '</i>' . '<strong>' . (($excerpt_length = idsapi_variable_get('idsimport', 'excerpt_length', 0)) ? $excerpt_length : 'Not specified') . '</strong>'; ?>
           <li> <?php echo '<i>' . __('Username assigned to imported content: ') . '</i>' . '<strong>' . idsapi_variable_get('idsimport', 'import_user', IDS_IMPORT_IMPORT_USER) . '</strong>'; ?>
           <li> <?php echo '<i>' . __('Levels of categories to import: ') . '</i>' . '<strong>' . (($idsimport_level_categories = idsapi_variable_get('idsimport', 'level_categories', IDS_IMPORT_CATEGORY_LEVELS)) ? $idsimport_level_categories : 'All levels') . '</strong>' ?>
         </ul>
@@ -272,7 +276,7 @@ function idsimport_importer_form() {
       <td>
         <?php
         foreach ($ids_datasets as $dataset) {
-          if (($default_dataset == $dataset) || ($default_dataset == 'both')) {
+          if (($default_dataset == $dataset) || ($default_dataset == 'all')) {
             $array_countries = $idsapi->search('countries', $dataset, $api_key)->getArrayTitles();
             $array_regions = $idsapi->search('regions', $dataset, $api_key)->getArrayTitles();
             $array_themes = $idsapi->search('themes', $dataset, $api_key)->getArrayTitles();
@@ -288,6 +292,8 @@ function idsimport_importer_form() {
         <b><u><?php _e('Additional filters'); ?></u></b>
         <ul>
           <li> <?php echo '<i>' . __('Age of documents and/or organisations: ') . '</i>' . '<strong>' . (($idsimport_age_new_assets = idsapi_variable_get('idsimport', 'age_new_assets', IDS_API_AGE_NEW_ASSETS)) ? $idsimport_age_new_assets . ' days' : '<i>Do not filter by age</i>') . '</strong>' ?>
+          <li> <?php echo '<i>' . __('Resources\' languages: ') . '</i>' . '<strong>' . (($idsimport_language_name_codes = idsapi_variable_get('idsimport', 'language_name_codes', array())) ? implode(', ', $idsimport_language_name_codes) : '<i>Do not filter by language</i>') . '</strong>' ?>
+          <li> <?php echo '<i>' . __('Exclude URIs: ') . '</i>' . '<strong>' . (($idsimport_exclude_uris = idsapi_variable_get('idsimport', 'exclude_uris', '')) ? $idsimport_exclude_uris : '<i>Do not exclude resources by their URIs</i>') . '</strong>' ?>
           <li> <?php echo '<i>' . __('Documents\' author(s): ') . '</i>' . '<strong>' . (($idsimport_import_authors_assets = idsapi_variable_get('idsimport', 'import_authors_assets', '')) ? $idsimport_import_authors_assets : '<i>none selected</i>') . '</strong>' ?>
           <li> <?php echo '<i>' . __('Documents\' publisher(s): ') . '</i>' . '<strong>' . (($idsimport_import_publishers_assets = idsapi_variable_get('idsimport', 'import_publishers_assets', '')) ? $idsimport_import_publishers_assets : '<i>none selected</i>') . '</strong>' ?>
           <li> <?php echo '<i>' . __('Additional query terms: ') . '</i>' . '<strong>' . (($idsimport_import_query = idsapi_variable_get('idsimport', 'import_query', '')) ? $idsimport_import_query : '<i>none selected</i>') . '</strong>' ?>
@@ -373,11 +379,11 @@ function idsimport_render_form() {
 
         <!-- Dataset -->
         <tr valign="top">
-          <th scope="row"><?php _e('Datasets to import from'); ?></th>
-          <td>
-            <label><input name="idsimport_options[default_dataset]" type="radio" value="eldis" <?php checked('eldis', idsapi_variable_get('idsimport', 'default_dataset', IDS_IMPORT_DEFAULT_DATASET_ADMIN)); ?> onchange="changeDataset('eldis');" /> Eldis only</label> <br />
-            <label><input name="idsimport_options[default_dataset]" type="radio" value="bridge" <?php checked('bridge', idsapi_variable_get('idsimport', 'default_dataset', IDS_IMPORT_DEFAULT_DATASET_ADMIN)); ?> onchange="changeDataset('bridge');" /> Bridge only</label><br />
-            <label><input name="idsimport_options[default_dataset]" type="radio" value="both" <?php checked('both', idsapi_variable_get('idsimport', 'default_dataset', IDS_IMPORT_DEFAULT_DATASET_ADMIN)); ?> onchange="changeDataset('both');" /> Both Eldis and Bridge</label><br />
+          <th scope="row"><?php _e('Sources to import from'); ?></th>
+          <td id="radio_dataset">
+            <label><input name="idsimport_options[default_dataset]" type="radio" value="eldis" <?php checked('eldis', idsapi_variable_get('idsimport', 'default_dataset', IDS_IMPORT_DEFAULT_DATASET_ADMIN)); ?> onchange="changeDataset();" /> Eldis only</label> <br />
+            <label><input name="idsimport_options[default_dataset]" type="radio" value="bridge" <?php checked('bridge', idsapi_variable_get('idsimport', 'default_dataset', IDS_IMPORT_DEFAULT_DATASET_ADMIN)); ?> onchange="changeDataset();" /> Bridge only</label><br />
+            <label><input name="idsimport_options[default_dataset]" type="radio" value="all" <?php checked('all', idsapi_variable_get('idsimport', 'default_dataset', IDS_IMPORT_DEFAULT_DATASET_ADMIN)); ?> onchange="changeDataset();" /> All sources</label><br />
           </td>
         </tr>
 
@@ -394,11 +400,62 @@ function idsimport_render_form() {
           </td>
         </tr>
 
+        <!-- Languages -->
+        <tr>
+          <th scope="row"><?php _e('Default language'); ?></th>
+          <td>
+            <?php echo ids_select_box('idsimport_options[language]', 'idsimport_language', ids_languages(), array(idsapi_variable_get('idsimport', 'language', IDS_IMPORT_DEFAULT_LANGUAGE))); ?>
+            <p class="description">
+            <?php _e('Translatable metadata (title, description) will be set in this language, if available.'); ?>
+            </p>
+          </td>
+        </tr>
+
+        <!-- Additional languages -->
+        <tr>
+          <th scope="row"><?php _e('Additional languages'); ?></th>
+          <td>
+            <?php echo ids_select_box('idsimport_options[additional_languages][]', 'idsimport_additional_languages', ids_languages(), idsapi_variable_get('idsimport', 'additional_languages', array()), TRUE); ?>
+            <a href="javascript:deselectAll('idsimport_additional_languages');"><?php _e('Deselect all'); ?></a>
+            <p class="description">
+            <?php _e('If available, metadata in the selected languages (title, description) will be imported, in addition to the one in the default language.'); ?>
+            </p>
+          </td>
+        </tr>
+
+        <!-- Updated assets -->
+        <tr>
+          <th scope="row"><?php _e('Updated resources'); ?></th>
+          <td>
+            <?php echo ids_select_box('idsimport_options[updated_assets]', 'idsimport_updated_assets', array('skip' => __('Always skip'), 'overwrite' => __('Always overwrite'), 'keep' => __('Keep both (pending of review)')), array(idsapi_variable_get('idsimport', 'updated_assets', IDS_IMPORT_UPDATED_ASSETS))); ?>
+            <p class="description">
+            <?php _e('Please indicate what to do with existing resources that have been updated in the source and have a more recent date_updated value than the one imported previously.'); ?>
+            <br/>
+            <?php _e('If "keep both" is selected, a new unpublished post will be created with the new values to be processed manually.'); ?>
+            <br/>
+            <?php _e('Please note that this will be applied only to documents and organisations. Categories will always be overwritten.'); ?>
+            </p>
+          </td>
+        </tr>
+
+        <!-- Number of assets to retrieve -->
+        <tr>
+          <th scope="row"><?php _e('Excerpts length'); ?></th>
+          <td>
+            <input type="text" size="10" name="idsimport_options[excerpt_length]" value="<?php echo idsapi_variable_get('idsimport', 'excerpt_length', 0); ?>" />
+            <p class="description">
+            <?php _e('Maximum length of excerpts to display.'); ?>
+            <br/>
+            <?php _e('If not set (or if the value is 0) the full description will be used.'); ?>
+            </p>
+          </td>
+        </tr>
+
         <!-- Publication date -->
         <tr>
           <th scope="row"><?php _e('Publication date'); ?></th>
           <td>
-            <?php echo ids_select_box('idsimport_options[pub_date]', 'idsimport_pub_date', array('default' => __('Import date'), 'date_created' => __('Date created (IDS API)'), 'date_updated' => __('Date updated (IDS API)')), idsapi_variable_get('idsimport', 'pub_date', 'default')); ?>
+            <?php echo ids_select_box('idsimport_options[pub_date]', 'idsimport_pub_date', array('default' => __('Import date'), 'date_created' => __('Date created (IDS API)'), 'date_updated' => __('Date updated (IDS API)')), array(idsapi_variable_get('idsimport', 'pub_date', 'default'))); ?>
             <p class="description">
             <?php _e('Date of publication of imported documents and/or organisations.'); ?>
             <br />
@@ -524,8 +581,32 @@ function idsimport_render_form() {
         <tr>
          <th scope="row"><?php _e('Age of documents and/or organisations'); ?></th>
           <td>
-            <?php echo ids_select_box('idsimport_options[age_new_assets]', 'idsimport_age_new_assets', array('0' => __('Do not filter by age'), '7' => __('One week'), '30' => __('One month'), '180' => __('Six months'), '365' => __('One year')), idsapi_variable_get('idsimport', 'age_new_assets', IDS_API_AGE_NEW_ASSETS)); ?>
+            <?php echo ids_select_box('idsimport_options[age_new_assets]', 'idsimport_age_new_assets', array('0' => __('Do not filter by age'), '7' => __('One week'), '30' => __('One month'), '180' => __('Six months'), '365' => __('One year')), array(idsapi_variable_get('idsimport', 'age_new_assets', IDS_API_AGE_NEW_ASSETS))); ?>
             <p class="description"><?php _e('Only documents/organisations published after the indicated time will be imported.'); ?></p>
+          </td>
+        </tr>
+
+        <!-- Resources' languages -->
+        <tr>
+          <th scope="row"><?php _e('Resources\' languages'); ?></th>
+          <td>
+            <?php echo ids_select_box('idsimport_options[language_name_codes][]', 'idsimport_language_name_codes', ids_languages(), idsapi_variable_get('idsimport', 'language_name_codes', array()), TRUE); ?>
+            <a href="javascript:deselectAll('idsimport_language_name_codes');"><?php _e('Deselect all'); ?></a>
+            <p class="description">
+            <?php _e('Only import resources that are available in the selected languages. If none is selected, resources in all languages will be imported.'); ?>
+            </p>
+          </td>
+        </tr>
+
+        <!-- Exclude URIs -->
+        <tr>
+          <th scope="row"><?php _e('Exclude URIs'); ?></th>
+          <td>
+            <input type="text" size="57" name="idsimport_options[exclude_uris]" value="<?php echo idsapi_variable_get('idsimport', 'exclude_uris', get_bloginfo('url')); ?>" /><br />
+            <p class="description">
+            <?php _e('Exclude resources that match certain URIs. Partial matching will be applied. Use commas to indicate several URIs.'); ?><br />
+            <?php _e('This filter can be used, for instance, to avoid importing resources that are originated from this site.'); ?><br />
+            <?php _e('Example: <i>http://www.worldbank.org/en/news, undp.org</i> would exclude WB\'s press releases and all resources from servers with undp.org as domain name.'); ?></p>
           </td>
         </tr>
 
@@ -590,28 +671,35 @@ function idsimport_render_form() {
 
         <!-- Dataset in public areas -->
         <tr valign="top">
-          <th scope="row"><?php _e('Datasets in public areas'); ?></th>
+          <th scope="row"><?php _e('Status of imported content'); ?></th>
           <td>
+            <!--
+            Commented - This setting should be reconsidered when the plugin is updated to see if we keep the option to set this at source level.
             <label><input name="idsimport_options[display_dataset_public]" type="radio" value="eldis" <?php checked('eldis', idsapi_variable_get('idsimport', 'display_dataset_public', IDS_IMPORT_DEFAULT_DATASET_PUBLIC)); ?> /> Eldis only</label> <br />
             <label><input name="idsimport_options[display_dataset_public]" type="radio" value="bridge" <?php checked('bridge', idsapi_variable_get('idsimport', 'display_dataset_public', IDS_IMPORT_DEFAULT_DATASET_PUBLIC)); ?> /> Bridge only</label><br />
-            <label><input name="idsimport_options[display_dataset_public]" type="radio" value="both" <?php checked('both', idsapi_variable_get('idsimport', 'display_dataset_public', IDS_IMPORT_DEFAULT_DATASET_PUBLIC)); ?> /> Both Eldis and Bridge</label><br />
+            -->
+            <label><input name="idsimport_options[display_dataset_public]" type="radio" value="none" <?php checked('none', idsapi_variable_get('idsimport', 'display_dataset_public', IDS_IMPORT_DEFAULT_DATASET_PUBLIC)); ?> /> Pending review</label><br />
+            <label><input name="idsimport_options[display_dataset_public]" type="radio" value="all" <?php checked('all', idsapi_variable_get('idsimport', 'display_dataset_public', IDS_IMPORT_DEFAULT_DATASET_PUBLIC)); ?> /> Published</label><br />
             <p class="description">
-            <?php _e('Content from the indicated datasets will be marked as "published" when imported. If a dataset is not selected, its content will be imported with "pending" status.'); ?><br>
+            <!--?php _e('Content from the indicated datasets will be marked as "published" when imported. If a dataset is not selected, its content will be imported with "pending" status.'); ?><br-->
             <?php _e('Please note that this applies to new content. The status of content that has already been imported can be changed in the plugin\'s administrative area.'); ?>
             </p>
           </td>
         </tr>
 
-        <!-- Dataset in admin areas -->
+        <!-- Datasets to display in admin areas - Displaying all the imported sources. Uncomment to enable this setting again -->
+        <!--
         <tr valign="top">
           <th scope="row"><?php _e('Datasets in administrative areas'); ?></th>
           <td>
+
             <label><input name="idsimport_options[display_dataset_admin]" type="radio" value="eldis" <?php checked('eldis', idsapi_variable_get('idsimport', 'display_dataset_admin', IDS_IMPORT_DEFAULT_DATASET_ADMIN)); ?> /> Eldis only</label> <br />
             <label><input name="idsimport_options[display_dataset_admin]" type="radio" value="bridge" <?php checked('bridge', idsapi_variable_get('idsimport', 'display_dataset_admin', IDS_IMPORT_DEFAULT_DATASET_ADMIN)); ?> /> Bridge only</label><br />
-            <label><input name="idsimport_options[display_dataset_admin]" type="radio" value="both" <?php checked('both', idsapi_variable_get('idsimport', 'display_dataset_admin', IDS_IMPORT_DEFAULT_DATASET_ADMIN)); ?> /> Both Eldis and Bridge</label><br />
+            <label><input name="idsimport_options[display_dataset_admin]" type="radio" value="all" <?php checked('all', idsapi_variable_get('idsimport', 'display_dataset_admin', IDS_IMPORT_DEFAULT_DATASET_ADMIN)); ?> /> All sources</label><br />
             <p class="description"><?php _e('Please indicate the datasets to display in the administrative areas of your site.'); ?></p>
           </td>
         </tr>
+        -->
       </table>
 
       <!------------------------------- CATEGORIES SETTINGS ------------------------>
@@ -642,7 +730,7 @@ function idsimport_render_form() {
         <tr valign="top" class="ids-categories-new">
           <th scope="row"><?php _e('Level of categories'); ?></th>
           <td>
-          <label><?php echo ids_select_box('idsimport_options[level_categories]', 'idsimport_level_categories', array(1 => __('One level'), 2 => __('Two levels'), 0 => __('All levels')), idsapi_variable_get('idsimport', 'level_categories', IDS_IMPORT_CATEGORY_LEVELS)); ?></label>
+          <label><?php echo ids_select_box('idsimport_options[level_categories]', 'idsimport_level_categories', array(1 => __('One level'), 2 => __('Two levels'), 0 => __('All levels')), array(idsapi_variable_get('idsimport', 'level_categories', IDS_IMPORT_CATEGORY_LEVELS))); ?></label>
           <p class="description">
           <?php _e('The level shows the position in the thematic hierarchy, starting at 1, the top level. Select the category levels to import.'); ?>
           </p>
@@ -694,7 +782,7 @@ function idsimport_render_form() {
                 </td>
                 <td class="ids-categories-container">
                   <p class="description"><?php _e("Map selected $category to:"); ?></p>
-                  <?php echo ids_select_box($field_id_target, $field_id_target, $wp_categories_select, '', FALSE, 'ids-mapping-select'); ?>
+                  <?php echo ids_select_box($field_id_target, $field_id_target, $wp_categories_select, array(), FALSE, 'ids-mapping-select'); ?>
                   <br /><br />
                   <p class="description"><a href="javascript:addMappings('<?php echo $field_id_source; ?>', '<?php echo $field_id_target; ?>', '<?php echo $field_id_mappings; ?>');"><?php _e('Add mapping'); ?> &rarr;</a></p>
                 </td>
@@ -749,7 +837,7 @@ function idsimport_render_form() {
         <tr class="ids-assets-import-field">
           <th scope="row"><?php _e('Frequency to import/update documents/organisations'); ?></th>
           <td>
-            <?php echo ids_select_box('idsimport_options[import_period_assets]', 'idsimport_import_period_assets', $idsimport_schedules, idsapi_variable_get('idsimport', 'import_period_assets', IDS_IMPORT_IMPORT_RECURRENCE_ASSETS)); ?>
+            <?php echo ids_select_box('idsimport_options[import_period_assets]', 'idsimport_import_period_assets', $idsimport_schedules, array(idsapi_variable_get('idsimport', 'import_period_assets', IDS_IMPORT_IMPORT_RECURRENCE_ASSETS))); ?>
             <p class="description"><?php _e('Please indicate the frequency with which you would like to import or update documents and/or organisations.'); ?></p>
           </td>
         </tr>
@@ -757,7 +845,7 @@ function idsimport_render_form() {
         <tr class="ids-categories-import-field ids-categories-new">
           <th scope="row"><?php _e('Frequency to import/update categories'); ?></th>
           <td>
-            <?php echo ids_select_box('idsimport_options[import_period_categories]', 'idsimport_import_period_categories', $idsimport_schedules, idsapi_variable_get('idsimport', 'import_period_categories', IDS_IMPORT_IMPORT_RECURRENCE_CATEGORIES)); ?>
+            <?php echo ids_select_box('idsimport_options[import_period_categories]', 'idsimport_import_period_categories', $idsimport_schedules, array(idsapi_variable_get('idsimport', 'import_period_categories', IDS_IMPORT_IMPORT_RECURRENCE_CATEGORIES))); ?>
             <p class="description"><?php _e('Please indicate the frequency with which you would like to import or update categories (countries, regions and themes).'); ?></p>
           </td>
         </tr>

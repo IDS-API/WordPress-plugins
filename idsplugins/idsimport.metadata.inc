@@ -6,12 +6,24 @@
 // Return NULL if not found.
 // (Used to retrieve terms and posts by IDS object id, for instance).
 function idsimport_get_id_by_meta($type, $meta_key, $meta_value) {
+  $object_ids = idsimport_get_ids_by_meta($type, $meta_key, $meta_value);
+  if (!empty($object_ids)) {
+    return $object_ids[0];
+  }
+  else {
+    return NULL;
+  }
+}
+
+// Given the type of object and a pair of metadata key and value, returns the all the found objects.
+// Return NULL if not found.
+function idsimport_get_ids_by_meta($type, $meta_key, $meta_value) {
   global $wpdb;
   $table = $wpdb->prefix . $type . 'meta';
   $id = $type . '_id';
   $select = "SELECT $id FROM $table WHERE meta_key = '%s' AND meta_value = '%s'";
-  $term_id = $wpdb->get_var($wpdb->prepare($select, $meta_key, $meta_value));
-  return $term_id;
+  $object_ids = $wpdb->get_col($wpdb->prepare($select, $meta_key, $meta_value));
+  return $object_ids;
 }
 
 // Add multiple-value metadata in posts.
@@ -23,8 +35,9 @@ function idsimport_add_post_array_meta($post_id, $meta_key, $array_values) {
 
 // Update multiple-value metadata in posts.
 function idsimport_update_post_array_meta($post_id, $meta_key, $array_values) {
+  delete_post_meta($post_id, $meta_key);
   foreach ($array_values as $meta_value) {
-    update_post_meta($post_id, $meta_key, $meta_value, FALSE);
+    add_post_meta($post_id, $meta_key, $meta_value, FALSE);
   }
 }
 
@@ -214,7 +227,7 @@ function idsimport_countries_metabox_edit($term) {
         $regions_select[$region->term_id] = idsimport_filter_the_category($region->name);
       }
     }
-    $select_field = ids_select_box('category_region_array[]', 'category_region_array', $regions_select, $selected_region);
+    $select_field = ids_select_box('category_region_array[]', 'category_region_array', $regions_select, array($selected_region));
     echo ids_tr_field_wrapper('form-field', 'category_region_array', __('Region'), $select_field);
   }
 }

@@ -31,14 +31,13 @@
 			<?php endif; // comments_open() ?>
 		</header><!-- .entry-header -->
 
-		<?php if ( is_search() ) : // Only display Excerpts for Search ?>
+		<?php if ( ! is_single() ) : ?>
 		<div class="entry-summary">
 			<?php the_excerpt(); ?>
 		</div><!-- .entry-summary -->
 		<?php else : ?>
 		<div class="entry-content">
-			<?php the_content( __( 'Continue reading <span class="meta-nav">&rarr;</span>', 'twentytwelve' ) ); ?>
-
+        <?php the_content( __( 'Continue reading <span class="meta-nav">&rarr;</span>', 'twentytwelve' ) ); ?>
       <!-- Example of a simple way in which these fields can be displayed. -->
 			<?php if ( is_single() ) : ?>
       <div class="ids-fields">

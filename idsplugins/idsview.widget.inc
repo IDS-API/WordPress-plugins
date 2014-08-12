@@ -49,6 +49,12 @@ class IDS_View_Widget extends WP_Widget {
 		else {
 			$apply_filters = FALSE;
 		}
+    if (isset($instance['idsview_widget_show_errors'])) {
+			$show_errors = $instance['idsview_widget_show_errors'];
+		}
+		else {
+			$show_errors = FALSE;
+		}
     ?>
 		<p>
 		<label for="<?php echo $this->get_field_id('idsview_widget_title'); ?>"><?php _e('Title to display'); ?></label> 
@@ -62,9 +68,11 @@ class IDS_View_Widget extends WP_Widget {
 		<input id="<?php echo $this->get_field_id('idsview_widget_num_items'); ?>" name="<?php echo $this->get_field_name('idsview_widget_num_items'); ?>" type="text" value="<?php echo $num_items; ?>" size="10"/>
     <br /><br />
     <label for="<?php echo $this->get_field_id('idsview_widget_show_type'); ?>"><?php _e('Type of content'); ?></label><br>
-    <?php echo ids_select_box($this->get_field_name('idsview_widget_show_type'), $this->get_field_id('idsview_widget_show_type'), array('documents' => __('Documents'), 'organisations' => __('Organisations')), $show_type); ?>
+    <?php echo ids_select_box($this->get_field_name('idsview_widget_show_type'), $this->get_field_id('idsview_widget_show_type'), array('documents' => __('Documents'), 'organisations' => __('Organisations')), array($show_type)); ?>
     <br /><br />
     <label for="<?php echo $this->get_field_id('idsview_widget_apply_filters'); ?>"><input id="<?php echo $this->get_field_id('idsview_widget_apply_filters'); ?>" name="<?php echo $this->get_field_name('idsview_widget_apply_filters'); ?>" type="checkbox" value="1" <?php  checked($apply_filters, TRUE); ?> /> <?php _e('Apply IDS View Plugin\'s filters'); ?></label>
+    <br /><br />
+    <label for="<?php echo $this->get_field_id('idsview_widget_show_errors'); ?>"><input id="<?php echo $this->get_field_id('idsview_widget_show_errors'); ?>" name="<?php echo $this->get_field_name('idsview_widget_show_errors'); ?>" type="checkbox" value="1" <?php  checked($show_errors, TRUE); ?> /> <?php _e('Show error messages'); ?></label>
 		</p>
     <?php
   }
@@ -83,6 +91,7 @@ class IDS_View_Widget extends WP_Widget {
     $instance['idsview_widget_num_items'] = $new_instance['idsview_widget_num_items'];
     $instance['idsview_widget_dataset'] = $new_instance['idsview_widget_dataset'];
     $instance['idsview_widget_apply_filters'] = $new_instance['idsview_widget_apply_filters'];
+    $instance['idsview_widget_show_errors'] = $new_instance['idsview_widget_show_errors'];
     return $instance;
   }
 
@@ -98,6 +107,7 @@ class IDS_View_Widget extends WP_Widget {
     $api_key = idsapi_variable_get('idsview', 'api_key', FALSE);
     $filter_params = array();
     $age_results = 0;
+    $assets = array();
     if ($api_key_validated) {
       $num_items = $instance['idsview_widget_num_items'];
       $type = $instance['idsview_widget_show_type'];
@@ -105,6 +115,7 @@ class IDS_View_Widget extends WP_Widget {
       $page_name = $dataset . 'view_' . $type;
       $page_id = idsapi_variable_get('idsview', $page_name, 0);
       $apply_filters = $instance['idsview_widget_apply_filters'];
+      $show_errors = $instance['idsview_widget_show_errors'];
       if ($apply_filters) {
         $age_results = idsapi_variable_get('idsview', 'age_new_assets', IDS_API_AGE_NEW_ASSETS);
         $view_query = idsapi_variable_get('idsview', 'view_query', '');
@@ -132,6 +143,7 @@ class IDS_View_Widget extends WP_Widget {
         if ($type == 'documents') { // Document-specific filters
           $authors_assets = idsapi_variable_get('idsview', 'view_authors_assets', '');
           $publishers_assets = idsapi_variable_get('idsview', 'view_publishers_assets', '');
+          $language_name_codes = idsapi_variable_get('idsview', 'language_name_codes', array());
           if ($authors_assets) {
             $authors = explode(',', $authors_assets);
             $list_authors = implode('|', array_map('trim', $authors));
@@ -142,46 +154,106 @@ class IDS_View_Widget extends WP_Widget {
             $list_publishers = implode('|', array_map('trim', $publishers));
             $filter_params['publisher_name'] = $list_publishers;
           }
-        }
-      }
-      $response = $idsapi->search($type, $dataset, $api_key, 'short', $num_items, $age_results, $filter_params, array('website_url'));
-      if ($response->isError()) {
-        $error_message = __('No content retrieved by the API call. ') . $response->errorMessage();
-        idsapi_register_error('idsview', $error_message, 'IDS_Importer::retrieve_content', 'warning');
-      }
-      else {
-        $assets = $response->results;
-        echo '<div class="ids-widget">';
-        if (!empty($assets)) {
-          $title = apply_filters('widget_title', $instance['idsview_widget_title']);
-          if (!empty($title)) {
-            echo '<h3 class="widget-title">' . $title . '</h3>';
+          if ($language_name_codes) {
+            $ids_languages = ids_languages();
+            $list_language_names = array();
+            foreach ($language_name_codes as $language_code) {
+              if (isset($ids_languages[$language_code])) {
+                $list_language_names[] = $ids_languages[$language_code]; 
+              }
+              if ($list_language_names) {
+                $language_names = implode('|', $list_language_names);
+                $filter_params['language_name'] = $language_names;
+              }
+            }
           }
-          echo '<ul class="ids-widget-list">';
-          foreach ($assets as $asset) {
-            $link = '';
-            if ($page_id) {
-              $link = get_permalink($page_id);
-              $par = ((preg_match('[\?]', $link)) ? '&' : '?');
-              $link = $link . $par . 'object_id=' . $asset->object_id;
-            }
-            elseif (isset($asset->website_url)) {
-              $link = $asset->website_url;
-            }
-            echo '<li class="ids-widget-item">';
-            if ($link) {
-              echo '<a href="' . $link . '">' . $asset->title . '</a>';
+        }
+        $num_retrieved = 0;
+        $total_results = 0;
+        $offset = 0;
+        $more_results = TRUE;
+        while (($num_retrieved < $num_items) && $more_results) {
+          if ($offset) {
+            $filter_params['start_offset'] = $offset;
+          }
+          $response = $idsapi->search($type, $dataset, $api_key, 'short', $num_items, $age_results, $filter_params, array('urls', 'language_array', 'website_url'));
+          if ($response->isError()) {
+            $error_message = __('No content retrieved by the API call. ') . $response->getErrorMessage();
+            idsapi_register_error('idsview', $error_message, 'IDS_View_Widget::widget', 'warning');
+            $more_results = FALSE;
+          }
+          else {
+            $assets_retrieved = $response->getResults();
+            if (!empty($assets_retrieved)) {
+              foreach ($assets_retrieved as $asset) {
+                if (!ids_exclude_asset('idsview', $asset)) {
+                  $assets[] = $asset;
+                  $num_retrieved++;
+                }
+                $offset++; 
+                if ($num_retrieved == $num_items) {
+                  break;
+                }
+              }
+              $total_results = $response->getTotalResults();
+              $more_results = ($total_results > $offset);
             }
             else {
-              echo $asset->title;
+              $more_results = FALSE;
             }
           }
-          echo '</ul>';
+        }
+      }
+      else {
+        $response = $idsapi->search($type, $dataset, $api_key, 'short', $num_items, $age_results, $filter_params, array('website_url'));
+        if ($response->isError()) {
+          $error_message = __('No content retrieved by the API call. ') . $response->getErrorMessage();
+          idsapi_register_error('idsview', $error_message, 'IDS_View_Widget::widget', 'warning');
         }
         else {
-          echo '<small>' . __('There are no matching assets to display.') . '</small><br/><br/>';
+          $assets = $response->getResults();
         }
-        echo '</div>';
+      }
+      echo '<div class="ids-widget">';
+      if (!empty($assets)) {
+        $idsview_default_language = idsapi_variable_get('idsview', 'language', IDS_VIEW_DEFAULT_LANGUAGE);
+        $title = apply_filters('widget_title', $instance['idsview_widget_title']);
+        if (!empty($title)) {
+          echo '<h3 class="widget-title">' . $title . '</h3>';
+        }
+        echo '<ul class="ids-widget-list">';
+        foreach ($assets as $asset) {
+          if ($apply_filters) {
+            $asset_title = ids_get_translation($asset, 'title', $idsview_default_language);
+          }
+          else {
+            $asset_title = $asset->title;
+          }
+          $link = '';
+          if ($page_id) {
+            $link = get_permalink($page_id);
+            $par = ((preg_match('[\?]', $link)) ? '&' : '?');
+            $link = $link . $par . 'object_id=' . $asset->object_id;
+          }
+          elseif (isset($asset->website_url)) {
+            $link = $asset->website_url;
+          }
+          echo '<li class="ids-widget-item">';
+          if ($link) {
+            echo '<a href="' . $link . '">' . $asset_title . '</a>';
+          }
+          else {
+            echo $asset_title;
+          }
+        }
+        echo '</ul>';
+      }
+      else {
+        echo '<small>' . __('There are no matching assets to display.') . '</small><br/><br/>';
+      }
+      echo '</div>';
+      if ($show_errors) {
+        idsapi_report_errors();
       }
     }
     else {

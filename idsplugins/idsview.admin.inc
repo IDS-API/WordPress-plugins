@@ -18,7 +18,7 @@ function idsview_admin_notices() {
 function idsview_get_datasets() {
   global $ids_datasets;
   $default_dataset = idsapi_variable_get('idsview', 'default_dataset', IDS_API_DEFAULT_DATASET);
-  if ($default_dataset == 'both') {
+  if ($default_dataset == 'all') {
     $datasets = $ids_datasets;
   }
   else {
@@ -119,26 +119,38 @@ function idsview_render_form() {
 
         <!-- Dataset -->
         <tr valign="top">
-          <th scope="row"><?php _e('View content from:'); ?></th>
+          <th scope="row"><?php _e('Display content from:'); ?></th>
+          <td id="radio_dataset">
+            <label><input name="idsview_options[default_dataset]" type="radio" value="eldis" <?php checked('eldis', idsapi_variable_get('idsview', 'default_dataset', IDS_API_DEFAULT_DATASET)); ?> onchange="changeDataset();" /> Eldis only</label> <br />
+            <label><input name="idsview_options[default_dataset]" type="radio" value="bridge" <?php checked('bridge', idsapi_variable_get('idsview', 'default_dataset', IDS_API_DEFAULT_DATASET)); ?> onchange="changeDataset();" /> Bridge only</label><br />
+            <label><input name="idsview_options[default_dataset]" type="radio" value="all" <?php checked('all', idsapi_variable_get('idsview', 'default_dataset', IDS_API_DEFAULT_DATASET)); ?> onchange="changeDataset();" /> All sources</label><br />
+          </td>
+        </tr>
+
+        <!-- Languages -->
+        <tr>
+          <th scope="row"><?php _e('Default language'); ?></th>
           <td>
-            <label><input name="idsview_options[default_dataset]" type="radio" value="eldis" <?php checked('eldis', idsapi_variable_get('idsview', 'default_dataset', IDS_API_DEFAULT_DATASET)); ?> onchange="changeDataset('eldis');" /> Eldis only</label> <br />
-            <label><input name="idsview_options[default_dataset]" type="radio" value="bridge" <?php checked('bridge', idsapi_variable_get('idsview', 'default_dataset', IDS_API_DEFAULT_DATASET)); ?> onchange="changeDataset('bridge');" /> Bridge only</label><br />
-            <label><input name="idsview_options[default_dataset]" type="radio" value="both" <?php checked('both', idsapi_variable_get('idsview', 'default_dataset', IDS_API_DEFAULT_DATASET)); ?> onchange="changeDataset('both');" /> Both Eldis and Bridge</label><br />
+            <?php echo ids_select_box('idsview_options[language]', 'idsview_language', ids_languages(), array(idsapi_variable_get('idsview', 'language', IDS_VIEW_DEFAULT_LANGUAGE))); ?>
+            <p class="description">
+            <?php _e('Translatable metadata (title, description) will be displayed in this language, if available.'); ?>
+            </p>
           </td>
         </tr>
 
         <!-- Number of assets to retrieve -->
         <tr>
-          <th scope="row"><?php _e('Number of documents/organisations'); ?></th>
+          <th scope="row"><?php _e('Excerpts length'); ?></th>
           <td>
-            <input type="text" size="10" name="idsview_options[num_items]" value="<?php echo idsapi_variable_get('idsview', 'num_items', IDS_API_NUM_ITEMS); ?>" />
+            <input type="text" size="10" name="idsview_options[excerpt_length]" value="<?php echo idsapi_variable_get('idsview', 'excerpt_length', 0); ?>" />
             <p class="description">
-            <?php _e('Number of documents and/or organisations to retrieve in each call to the IDS API.'); ?>
+            <?php _e('Maximum length of excerpts to display.'); ?>
             <br/>
-            <?php _e('If not set (or if the value is 0) all available items will be retrieved.'); ?>
+            <?php _e('If not set (or if the value is 0) the full description will be used.'); ?>
             </p>
           </td>
         </tr>
+
       </table>
 
       <h3><?php _e('Filters'); ?></h3>
@@ -217,8 +229,32 @@ function idsview_render_form() {
         <tr>
          <th scope="row"><?php _e('Age of documents and/or organisations'); ?></th>
           <td>
-            <?php echo ids_select_box('idsview_options[age_new_assets]', 'idsview_age_new_assets', array('0' => __('Do not filter by age'), '7' => __('One week'), '30' => __('One month'), '180' => __('Six months'), '365' => __('One year')), idsapi_variable_get('idsview', 'age_new_assets', IDS_API_AGE_NEW_ASSETS)); ?>
+            <?php echo ids_select_box('idsview_options[age_new_assets]', 'idsview_age_new_assets', array('0' => __('Do not filter by age'), '7' => __('One week'), '30' => __('One month'), '180' => __('Six months'), '365' => __('One year')), array(idsapi_variable_get('idsview', 'age_new_assets', IDS_API_AGE_NEW_ASSETS))); ?>
             <p class="description"><?php _e('Only documents/organisations published after the indicated time will be shown.'); ?></p>
+          </td>
+        </tr>
+
+        <!-- Resources' languages -->
+        <tr>
+          <th scope="row"><?php _e('Resources\' languages'); ?></th>
+          <td>
+            <?php echo ids_select_box('idsview_options[language_name_codes][]', 'idsview_language_name_codes', ids_languages(), idsapi_variable_get('idsview', 'language_name_codes', array()), TRUE); ?>
+            <a href="javascript:deselectAll('idsview_language_name_codes');"><?php _e('Deselect all'); ?></a>
+            <p class="description">
+            <?php _e('Only display resources that are available in the selected languages. If none is selected, resources in all languages will be displayed.'); ?>
+            </p>
+          </td>
+        </tr>
+
+        <!-- Exclude URIs -->
+        <tr>
+          <th scope="row"><?php _e('Exclude URIs'); ?></th>
+          <td>
+            <input type="text" size="57" name="idsview_options[exclude_uris]" value="<?php echo idsapi_variable_get('idsview', 'exclude_uris', get_bloginfo('url')); ?>" /><br />
+            <p class="description">
+            <?php _e('Exclude resources that match certain URIs. Partial matching will be applied. Use commas to indicate several URIs.'); ?><br />
+            <?php _e('This filter can be used, for instance, to avoid displaying resources that are originated from this site.'); ?><br />
+            <?php _e('Example: <i>http://www.worldbank.org/en/news, undp.org</i> would exclude WB\'s press releases and all resources from servers with undp.org as domain name.'); ?></p>
           </td>
         </tr>
 
@@ -251,7 +287,7 @@ function idsview_render_form() {
             <input type="text" size="57" name="idsview_options[view_query]" value="<?php echo idsapi_variable_get('idsview', 'view_query', ''); ?>" /><br />
             <p class="description">
             <?php _e('Query string to be appended to the API URL.'); ?><br />
-            <?php _e('Use comma-separated pairs of unencoded query fields and values (example: <i>country=Argentina, keyword=climate change, language_name=Spanish</i>).'); ?><br />
+            <?php _e('Use comma-separated pairs of unencoded query fields and values (example: <i>country=Argentina, keyword=climate change</i>).'); ?><br />
             <?php printf(__('Please check the <a href="%s" target="_new">online documentation</a> for a list of available query fields.'), IDS_API_SEARCH_FIELDS_URL); ?>
            </p>
           </td>
@@ -278,6 +314,9 @@ function idsview_render_form() {
 
 // Validate input and the API key.
 function idsview_validate_options($input) {
+
+  //print_r($input);
+
   $idsapi = new IdsApiWrapper;
   $error = FALSE;
   $error_message = '';
@@ -311,20 +350,16 @@ function idsview_validate_options($input) {
     $error = TRUE;
     $error_message = __(' The IDS API key format is not valid. Please enter a valid API key.');
   }
-  if ($error) {
-    $input['setup_done'] = FALSE;
-    add_settings_error('idsview_options', 'idsview_errors', $error_message);
-  }
-  else {
-    $input['setup_done'] = TRUE;
-  }
-  if ($idsview_api_key_validated) { //If the API key had not been validated, the other fields had not been displayed, so there's nothing else to check.
-    if (isset($input['num_items'])) {
-      if (!is_numeric($input['num_items'])) {
+  if ($idsview_api_key_validated) { //If the API key was not validated, the other fields have not been displayed, so there's nothing else to check.
+    if (isset($input['excerpt_length'])) {
+      if (!is_numeric($input['excerpt_length'])) {
         $error = TRUE;
-        $error_message .= ' ' . $input['num_items'] . __(' is not a valid number. Please enter a numeric value.');
-        $input['num_items'] = IDS_API_NUM_ITEMS;
+        $error_message .= ' ' . $input['excerpt_length'] . __(' is not a valid length. Please enter a numeric value.');
+        $input['excerpt_length'] = 0;
       }
+    }
+    if (isset($input['exclude_uris'])) {
+      $input['exclude_uris'] = wp_kses($input['exclude_uris'], $allowed_html);
     }
     if (isset($input['view_authors_assets'])) {
       $input['view_authors_assets'] = wp_kses($input['view_authors_assets'], $allowed_html);
@@ -335,6 +370,13 @@ function idsview_validate_options($input) {
     if (isset($input['view_query'])) {
       $input['view_query'] = wp_kses($input['view_query'], $allowed_html);
     }
+  }
+  if ($error) {
+    $input['setup_done'] = FALSE;
+    add_settings_error('idsview_options', 'idsview_errors', $error_message);
+  }
+  else {
+    $input['setup_done'] = TRUE;
   }
   return $input;
 }

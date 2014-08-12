@@ -1,17 +1,24 @@
 <?php
 
 /*
+*
+* NOTE: A valid API key is needed in order to run these examples.
+* Please go to http://api.ids.ac.uk/ and request an API key. Once you get it, set the $valid_api_key variable with it.
+*
+*/
+
+/*
 * STEP 1: The IdsApiWrapper class definition is included.
 */
-require_once('idsapi.wrapper.inc');
+require_once('idswrapper.wrapper.inc');
 
 /*
 * STEP 2: A new IdsApiWrapper object is created.
 */
 $idsapi = new IdsApiWrapper;
 
-$valid_api_key = '9cff1f93-8bb7-4106-9933-224e4ea60c17';
-$wrong_api_key = '9cff1f93-8bb7-4106-99999999999999999';
+//$valid_api_key = 'YOUR API KEY HERE';
+$wrong_api_key = '11111111-2222-3333-44444444444444444';
 
 header('Content-Type: text/html');
 
@@ -79,14 +86,26 @@ echo '<hr>';
 echo "<b>Example 5:</b> Get all 'short' records for Bridge regions.\n\n";
 echo '<pre>';
 echo '$response = $idsapi->get_all(\'regions\', \'bridge\', $valid_api_key, \'short\')' . "\n";
-$response = $idsapi->get_all('regions', 'bridge', $valid_api_key, 'short');
+$response = $idsapi->getAll('regions', 'bridge', $valid_api_key, 'short');
 echo '$response: ';
 print_r($response);
 echo '</pre>';
 echo '<hr>';
 
 /*
-* Example 6: Empty response.
+* Example 5: count.
+*/
+echo "<b>Example 6:</b> How many documents related to Germany are in each theme in Eldis.\n\n";
+echo '<pre>';
+echo '$response = $idsapi->count(\'documents\', \'eldis\', $valid_api_key, \'theme\', 0, array(\'country\'=>\'Germany\'))' . "\n";
+$response = $idsapi->count('documents', 'eldis', $valid_api_key, 'theme', 0, array('country'=>'Germany'));
+echo '$response: ';
+print_r($response);
+echo '</pre>';
+echo '<hr>';
+
+/*
+* Example 7: Empty response.
 */
 echo "<b>Example 6:</b> Bridge's organisations (empty set).\n\n";
 echo '<pre>';
@@ -98,7 +117,7 @@ echo '</pre>';
 echo '<hr>';
 
 /*
-* Example 7: Wrong API key.
+* Example 8: Wrong API key.
 */
 echo "<b>Example 7:</b> Using a wrong API key.\n\n";
 echo '<pre>';
@@ -111,7 +130,7 @@ echo '</pre>';
 echo '<hr>';
 
 /*
-* Example 8: Wrong dataset.
+* Example 9: Wrong dataset.
 */
 echo "<b>Example 8:</b> Using a wrong dataset.\n\n";
 echo '<pre>';

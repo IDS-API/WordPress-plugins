@@ -9,13 +9,16 @@
 
 class IdsApiResponse {
 
+  // These properties should be protected, but we need to check first where this class is
+  // currently being used, to make sure we don´t break the plugins, etc. 
+
   // Results. Array of IdsApiObject (or its subclasses).
   public $results = array();
 
   // If the API called did not respond with a well-structured response.
   public $is_error = FALSE;
 
-  // Flag to indicate if the response is from a cache.
+  // Flag to indicate if the response is from the cache.
   public $cached = FALSE;
 
   // Error message, in case an error was produced.
@@ -79,11 +82,35 @@ class IdsApiResponse {
   }
 
   /**
+  * Indicate if the response is from the cache.
+  * @return bool
+  */
+  function isCached() {
+    return $this->cached;
+  }
+
+  /**
   * Return the error message.
   * @return string.
   */
   function getErrorMessage() {
     return $this->error_message;
+  }
+
+  /**
+  * Return the results of the response.
+  * @return array.
+  */
+  function getResults() {
+    return $this->results;
+  }
+
+  /**
+  * Return the total results of the response.
+  * @return int.
+  */
+  function getTotalResults() {
+    return $this->total_results;
   }
 
   /**
@@ -116,7 +143,7 @@ class IdsApiResponse {
     $list_objects = array();
     foreach ($this->results as $object) {
       if ((!isset($object->archived)) || ($object->archived !== 'true')) {
-        $list_objects[] = '<a href="' . htmlspecialchars_decode($object->website_url) . '">'. $object->title . '</a>';
+        $list_objects[] = '<a class="' . IDS_API_CSS_OBJECT .'" href="' . htmlspecialchars_decode($object->website_url) . '">'. $object->title . '</a>';
       }
     }
     return $list_objects;

@@ -68,7 +68,7 @@ class IdsApiCache{
     }
 	}
 	
-	public function store($name,$val,$expires = 600,$group = '') {
+	public function store($name, $val, $expires = 600, $group = '') {
 		$cache = array('expires' => time() + $expires, 'data' => $val);
 		if($group != '')
 			$cache['group'] = $group;

@@ -12,6 +12,9 @@ if (!defined('IDS_API_ENVIRONMENT')) define('IDS_API_ENVIRONMENT', 'wordpress');
 
 define('IDS_VIEW_MENU_TITLE', 'IDS View');
 
+define('IDS_VIEW_DEFAULT_LANGUAGE', 'en');
+define('IDS_VIEW_DISPLAY_ERRORS', TRUE);
+
 /* Widget's default parameters */
 
 define('IDS_VIEW_WIDGET_ASSETS_TYPE', 'documents');

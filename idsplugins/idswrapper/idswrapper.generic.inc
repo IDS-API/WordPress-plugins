@@ -5,7 +5,7 @@
 * For instance, in Drupal, we would use its internal caching mechanism instead (see cms/idsapi.drupal.inc).
 */
 
-require_once('idsapi.cache.inc');
+require_once('idswrapper.cache.inc');
 
 global $idsapi_cache;
 $idsapi_cache = new IdsApiCache(array('repository' => dirname(__FILE__) . '/' . IDS_API_CACHE_DIR));

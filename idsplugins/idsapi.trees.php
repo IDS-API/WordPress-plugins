@@ -1,9 +1,9 @@
 <?php
 
-if (!defined('IDS_API_LIBRARY_PATH')) define('IDS_API_LIBRARY_PATH', 'idsapi/');
+if (!defined('IDS_API_LIBRARY_PATH')) define('IDS_API_LIBRARY_PATH', dirname(__FILE__) . '/idswrapper/');
 if (!defined('IDS_API_ENVIRONMENT')) define('IDS_API_ENVIRONMENT', 'generic');
 
-require_once(IDS_API_LIBRARY_PATH . 'idsapi.wrapper.inc');
+require_once(IDS_API_LIBRARY_PATH . 'idswrapper.wrapper.inc');
 
 $idsapi = new IdsApiWrapper;
 
