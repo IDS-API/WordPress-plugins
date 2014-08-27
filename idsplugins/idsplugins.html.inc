@@ -5,7 +5,7 @@ define('IDS_PLUGINS_SCRIPTS_PATH', 'scripts/');
 //--------------------------------- Custom template tags --------------------------
 
 // IDS date_updated tag
-function ids_date_updated($before = '', $after = '') {
+function ids_date_updated($before='', $after='') {
   global $post;
   $date = (isset($post->date_updated) ? $post->date_updated : get_post_meta($post->ID, 'date_updated', TRUE));
   if ($date) {
@@ -17,7 +17,7 @@ function ids_date_updated($before = '', $after = '') {
 }
 
 // IDS acronym tag
-function ids_acronym($before = '', $after = '') {
+function ids_acronym($before='', $after='') {
   global $post;
   $acronym = (isset($post->acronym) ? $post->acronym : get_post_meta($post->ID, 'acronym', TRUE));
   if ($acronym) {
@@ -26,7 +26,7 @@ function ids_acronym($before = '', $after = '') {
 }
 
 // IDS location_country tag
-function ids_location_country($before = '', $after = '') {
+function ids_location_country($before='', $after='') {
   global $post;
   $location_country = (isset($post->location_country) ? $post->location_country : get_post_meta($post->ID, 'location_country', TRUE));
   if ($location_country) {
@@ -35,7 +35,7 @@ function ids_location_country($before = '', $after = '') {
 }
 
 // IDS location_country tag
-function ids_organisation_type($before = '', $after = '') {
+function ids_organisation_type($before='', $after='') {
   global $post;
   $organisation_type = (isset($post->organisation_type) ? $post->organisation_type : get_post_meta($post->ID, 'organisation_type', TRUE));
   if ($organisation_type) {
@@ -44,7 +44,7 @@ function ids_organisation_type($before = '', $after = '') {
 }
 
 // IDS organisation_url tag
-function ids_organisation_url($before = '', $after = '') {
+function ids_organisation_url($before='', $after='') {
   global $post;
   $organisation_url = (isset($post->organisation_url) ? $post->organisation_url : get_post_meta($post->ID, 'organisation_url', TRUE));
   if ($organisation_url) {
@@ -53,7 +53,7 @@ function ids_organisation_url($before = '', $after = '') {
 }
 
 // IDS authors tag
-function ids_authors($before = '', $sep = ', ', $after = '') {
+function ids_authors($before='', $sep=', ', $after='') {
   global $post;
   $authors = (isset($post->authors) ? $post->authors : get_post_meta($post->ID, 'authors', FALSE));
   if (is_array($authors)) {
@@ -65,7 +65,7 @@ function ids_authors($before = '', $sep = ', ', $after = '') {
 }
 
 // IDS urls tag
-function ids_external_urls($before = '', $sep = ', ', $after = '') {
+function ids_external_urls($before='', $sep=', ', $after='') {
   global $post;
   $urls = (isset($post->urls) ? $post->urls : get_post_meta($post->ID, 'urls', FALSE));
   if (is_array($urls)) {
@@ -80,28 +80,27 @@ function ids_external_urls($before = '', $sep = ', ', $after = '') {
 }
 
 // IDS countries tag
-// TODO. Include links passing the countries as parameters to idsview_documents / idsview_organisations.
-function ids_countries($before = '', $sep = ', ', $after = '') {
+function ids_countries($before='', $sep=', ', $after='', $base_url='') {
   global $post;
-  $countries = (isset($post->ids_countries) ? $before . implode($sep, array_map('ids_link_category', $post->ids_countries)) . $after : ids_get_list_categories($post->ID, 'countries', $before, $sep, $after ));
+  $countries = (isset($post->ids_countries) ? $before . implode($sep, ids_links_category($post->ids_countries, $base_url)) . $after : ids_get_list_categories($post->ID, 'countries', $before, $sep, $after));
   if (($countries) && (!is_wp_error($countries))) {
     echo $countries;
   }
 }
 
 // IDS regions tag
-function ids_regions($before = '', $sep = ', ', $after = '') {
+function ids_regions($before='', $sep=', ', $after='', $base_url='') {
   global $post;
-  $regions = (isset($post->ids_regions) ? $before . implode($sep, array_map('ids_link_category', $post->ids_regions)) . $after : ids_get_list_categories($post->ID, 'regions', $before, $sep, $after ));
+  $regions = (isset($post->ids_regions) ? $before . implode($sep, ids_links_category($post->ids_regions, $base_url)) . $after : ids_get_list_categories($post->ID, 'regions', $before, $sep, $after));
   if (($regions) && (!is_wp_error($regions))) {
     echo $regions;
   }
 }
 
 // IDS themes tag
-function ids_themes($before = '', $sep = ', ', $after = '') {
+function ids_themes($before='', $sep=', ', $after='', $base_url='') {
   global $post;
-  $themes = (isset($post->ids_themes) ? $before . implode($sep, array_map('ids_link_category', $post->ids_themes)) . $after : ids_get_list_categories($post->ID, 'themes', $before, $sep, $after ));
+  $themes = (isset($post->ids_themes) ? $before . implode($sep, ids_links_category($post->ids_themes, $base_url)) . $after : ids_get_list_categories($post->ID, 'themes', $before, $sep, $after));
   if (($themes) && (!is_wp_error($themes))) {
     echo $themes;
   }
@@ -110,7 +109,7 @@ function ids_themes($before = '', $sep = ', ', $after = '') {
 // Returns IDS categories attached to post (the post could have been assigned both Eldis and Bridge categories).
 function ids_get_list_categories($post_id, $category, $before, $sep, $after) {
   global $ids_datasets;
-  $terms = '';
+  $terms='';
   foreach ($ids_datasets as $dataset) {
     $taxonomy_name = $dataset . '_' . $category;
     if (taxonomy_exists($taxonomy_name)) {
@@ -125,7 +124,7 @@ function ids_get_list_categories($post_id, $category, $before, $sep, $after) {
 //-------------------- Generation of HTML and javascript code -------------------
 
 // Shows a message to the user at the top of an admin page.
-function ids_show_message($message, $visibility = 'block') {
+function ids_show_message($message, $visibility='block') {
 ?>
   <div class="updated" style="display:<?php echo $visibility; ?>>;">
     <p>
@@ -191,15 +190,21 @@ function ids_div_field_wrapper($class, $field_name, $label, $contents) {
 }
 
 // Given a category object, returns a link to it. Used in idsview_documents/idsview_organisations.
-function ids_link_category($category) {
-  $baseurl = get_page_link();
-  if (isset($category->name) && isset ($category->object_type) && isset($category->object_id)) {
-    $object_type = strtolower($category->object_type);
-    $category_name = rtrim($category->name, " ($category->object_id)");
-    $par = ((preg_match('[\?]', $baseurl)) ? '&' : '?');
-    $url = '<a href="'. $baseurl . $par . $object_type . "=$category->object_id" . '">' . $category_name . '</a>';
-    return $url;
+function ids_links_category($categories, $baseurl) {
+  $links = array();
+  if (empty($baseurl)) {
+    $baseurl = get_page_link();
   }
+  $par = ((preg_match('[\?]', $baseurl)) ? '&' : '?');
+  foreach ($categories as $category) {
+    if (isset($category->name) && isset ($category->object_type) && isset($category->object_id)) {
+      $object_type = strtolower($category->object_type);
+      $category_name = rtrim($category->name, " ($category->object_id)");
+      $url = '<a href="'. $baseurl . $par . $object_type . "=$category->object_id" . '">' . $category_name . '</a>';
+      $links[] = $url;
+    }
+  }
+  return $links;
 }
 
 // Create and return link
@@ -265,7 +270,7 @@ function ids_php2js($php_array = array()) {
 }
 
 // Initialize category arrays for each dataset in a javascript variable, default dataset and keep track of selected categories.
-function ids_init_javascript($plugin, $api_key = '', $api_key_validated = FALSE, $default_dataset = IDS_API_DEFAULT_DATASET, $categories = array(), $categories_mappings = array(), $default_user = FALSE) {
+function ids_init_javascript($plugin, $api_key='', $api_key_validated = FALSE, $default_dataset = IDS_API_DEFAULT_DATASET, $categories = array(), $categories_mappings = array(), $default_user = FALSE) {
   global $ids_datasets;
   ?>
   <script type="text/javascript">
