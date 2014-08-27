@@ -88,12 +88,12 @@ class IDS_Importer extends WP_Importer {
             $output = __('Updated ') . $results['updated'] . ' ' . ucfirst($dataset) . ' ' . __($type);
             echo ids_div_field_wrapper('ids-results-import', '', '', $output);
           }
-          if ($results['duplicated']) {
+          if (isset($results['duplicated']) && $results['duplicated']) {
             $total += $results['duplicated'];
             $output = __('New versions created for ') . $results['duplicated'] . ' ' . ucfirst($dataset) . ' ' . __($type);
             echo ids_div_field_wrapper('ids-results-import', '', '', $output);
           }
-          if ($results['skipped']) {
+          if (isset($results['skipped']) && $results['skipped']) {
             $output = __('Skipped ') . $results['skipped'] . ' ' . ucfirst($dataset) . ' ' . __($type);
             echo ids_div_field_wrapper('ids-results-import', '', '', $output);
           }

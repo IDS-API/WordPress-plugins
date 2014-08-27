@@ -51,8 +51,7 @@ function idsimport_create_taxonomy_metadata() {
 	if (!empty($wpdb->charset))
 		$charset_collate = "DEFAULT CHARACTER SET $wpdb->charset";
 	if (!empty($wpdb->collate))
-		$charset_collate .= " COLLATE $wpdb->collate";
-	
+		$charset_collate .= " COLLATE $wpdb->collate";	
 	$tables = $wpdb->get_results("show tables like '$table'");
   $taxonomy_id = IDS_IMPORT_TAXONOMY . '_id';
 	if (!count($tables))
@@ -65,9 +64,7 @@ function idsimport_create_taxonomy_metadata() {
 			KEY $taxonomy_id ($taxonomy_id),
 			KEY meta_key (meta_key)
 		) $charset_collate;");
-
 	$wpdb->idsimport_taxonomymeta = $table;
-
 }
 
 // Drops taxonomy metadata table
@@ -153,18 +150,19 @@ function idsimport_get_term_post_count_by_type($term_id, $taxonomy, $type) {
   return count($ps);
 }
 
-// TODO. Generalize these functions so it can be defined more easily which fields are available for each dataset/type of content combination.
+/*
+ TODO: Define custom fields for assets and categories externaly and retrieve them here.
+ The label and description could be part of the IDS API Wrapper and the type of widget and size could be defined in the IDS Import plugin.
+*/
 
 // Add fields to IDS regions edit page.
 function idsimport_regions_metabox_edit($term) {
   idsimport_general_metabox_edit($term);
   idsimport_common_metabox_edit($term);
-
   /* Website URL */
   $website_url = idsimport_get_term_meta($term->term_id, 'website_url', true);
   $input_field = ids_input_field('website_url', 40, $website_url, 'website_url', __('Website URL'), __('Link to the category page on the site'), 'input-metabox', 'true');
   echo ids_tr_field_wrapper('form-field', 'website_url', __('Website URL'), $input_field);
-
 }
 
 // Add fields to IDS themes edit page.
@@ -176,39 +174,32 @@ function idsimport_themes_metabox_edit($term) {
 // Add fields to IDS countries edit page.
 function idsimport_countries_metabox_edit($term) {
   idsimport_general_metabox_edit($term);
-
   /* Website URL */
   $website_url = idsimport_get_term_meta($term->term_id, 'website_url', true);
   $input_field = ids_input_field('website_url', 40, $website_url, 'website_url', __('Website URL'), __('Link to the category page on the site'), 'input-metabox', 'true');
   echo ids_tr_field_wrapper('form-field', 'website_url', __('Website URL'), $input_field);
-
   /* Alternative name */
   $alternative_name = idsimport_get_term_meta($term->term_id, 'alternative_name', true);
   $input_field = ids_input_field('alternative_name', 40, $alternative_name, 'alternative_name', __('Alternative name'), __('Alternative name of country'), 'input-metabox', 'true');
   echo ids_tr_field_wrapper('form-field', 'alternative_name', __('Alternative name'), $input_field);
-
   /* Asset ID */ //It's not being used?
   $asset_id = idsimport_get_term_meta($term->term_id, 'asset_id', true);
   if ($asset_id) {
     $input_field = ids_input_field('asset_id', 10, $asset_id, 'asset_id', __('Asset ID'), __('Country numeric identifier'), 'input-metabox', 'true');
     echo ids_tr_field_wrapper('form-field', 'asset_id', __('Asset ID'), $input_field);
   }
-  
   /* ISO number */
   $iso_number = idsimport_get_term_meta($term->term_id, 'iso_number', true);
   $input_field = ids_input_field('iso_number', 10, sprintf("%03d", $iso_number), 'iso_number', __('ISO number'), __('Numeric country code (ISO 3166-1)'), 'input-metabox', 'true');
   echo ids_tr_field_wrapper('form-field', 'iso_number', __('ISO number'), $input_field);
-
   /* ISO three-letter code */
   $iso_three_letter_code = idsimport_get_term_meta($term->term_id, 'iso_three_letter_code', true);
   $input_field = ids_input_field('iso_three_letter_code', 10, $iso_three_letter_code, 'iso_three_letter_code', __('ISO three-letter code'), __('Three-letter country code (ISO 3166-1 alpha-3)'), 'input-metabox', 'true');
   echo ids_tr_field_wrapper('form-field', 'iso_three_letter_code', __('ISO three-letter code'), $input_field);
-
   /* ISO two-letter code */
   $iso_two_letter_code = idsimport_get_term_meta($term->term_id, 'iso_two_letter_code', true);
   $input_field = ids_input_field('iso_two_letter_code', 10, $iso_two_letter_code, 'iso_two_letter_code', __('ISO two-letter code'), __('Two-letter country code (ISO 3166-1 alpha-2)'), 'input-metabox', 'true');
   echo ids_tr_field_wrapper('form-field', 'iso_two_letter_code', __('ISO two-letter code'), $input_field);
-
   /* Regions */
   // TODO. Generalize for multiple regions.
   $site = idsimport_get_term_meta($term->term_id, 'site', true);
@@ -234,57 +225,46 @@ function idsimport_countries_metabox_edit($term) {
 
 // Fields common to all IDS categories.
 function idsimport_general_metabox_edit($term) {
-
   /* Site */
   $site = idsimport_get_term_meta($term->term_id, 'site', true);
   $input_field = ids_input_field('site', 10, $site, 'site', __('Site'), __('Name of the collection to which this category belongs'), 'input-metabox', 'true');
   echo ids_tr_field_wrapper('form-field', 'site', __('Site'), $input_field);
-
   /* Object ID */
   $object_id_field = $site . '_object_id';
   $object_id = idsimport_get_term_meta($term->term_id, $object_id_field, true);
   $input_field = ids_input_field($object_id_field, 10, $object_id, $object_id_field, __('Object ID'), __('Unique idenitfier of this category'), 'input-metabox', 'true');
   echo ids_tr_field_wrapper('form-field', $object_id_field, __('Object ID'), $input_field);
-
   /* Metadata URL */
   $metadata_url = idsimport_get_term_meta($term->term_id, 'metadata_url', true);
   $input_field = ids_input_field('metadata_url', 40, $metadata_url, 'metadata_url', __('Metadata URL'), __('Web-accessible uri for this object'), 'input-metabox', 'true');
   echo ids_tr_field_wrapper('form-field', 'metadata_url', __('Metadata URL'), $input_field);
-
   /* Timestamp */
   $timestamp = idsimport_get_term_meta($term->term_id, 'timestamp', true);
   $input_field = ids_input_field('timestamp', 20, $timestamp, 'timestamp', __('Timestamp'), __('Indicates when record was indexed in the API'), 'input-metabox', 'true');
   echo ids_tr_field_wrapper('form-field', 'timestamp', __('Timestamp'), $input_field);
-
 }
 
 // Fields present in regions and themes.
 function idsimport_common_metabox_edit($term) {
-
   /* Archived */
   $archived = idsimport_get_term_meta($term->term_id, 'archived', true);
   $input_field = ids_input_field('archived', 10, $archived, 'archived', __('Archived'), __('The category is archived'), 'input-metabox', 'true');
   echo ids_tr_field_wrapper('form-field', 'archived', __('Archived'), $input_field);
-
   /* Level */
   $level = idsimport_get_term_meta($term->term_id, 'level', true);
   $input_field = ids_input_field('level', 10, $level, 'level', __('Level'), __('Position in the hierarchy, starting at 1, the top level'), 'input-metabox', 'true');
   echo ids_tr_field_wrapper('form-field', 'level', __('Level'), $input_field);
-
   /* Category parent */
   $cat_parent = idsimport_get_term_meta($term->term_id, 'cat_parent', true);
   $input_field = ids_input_field('cat_parent', 10, $cat_parent, 'cat_parent', __('Category parent'), __('Parent category identifier'), 'input-metabox', 'true');
   echo ids_tr_field_wrapper('form-field', 'cat_parent', __('Category parent'), $input_field);
-
   /* Category superparent */
   $cat_superparent = idsimport_get_term_meta($term->term_id, 'cat_superparent', true);
   $input_field = ids_input_field('cat_superparent', 10, $cat_superparent, 'cat_superparent', __('Category superparent'), __('First category in the tree'), 'input-metabox', 'true');
   echo ids_tr_field_wrapper('form-field', 'cat_superparent', __('Category superparent'), $input_field);
-
   /* Category ID */
   $category_id = idsimport_get_term_meta($term->term_id, 'category_id', true);
   $input_field = ids_input_field('category_id', 10, $category_id, 'category_id', __('Category ID'), __('Numeric unique identifier of this category'), 'input-metabox', 'true');
   echo ids_tr_field_wrapper('form-field', 'category_id', __('Category ID'), $input_field);
-
 }
 

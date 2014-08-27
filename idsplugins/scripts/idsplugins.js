@@ -14,6 +14,83 @@ function changeImportSettings() {
   }
 }
 
+function changeFields() {
+  $jqorig.each($jqorig('.idsexpose-content-types'), function(i, type) { 
+    type_name = $jqorig(type).attr("id");
+    if ($jqorig(type).prop("checked")) {
+      $jqorig('#' + 'fields-' + type_name).show();
+    }
+    else {
+      $jqorig('#' + 'fields-' + type_name).hide();
+    }
+  });
+}
+
+function changeFeedType() {
+  var type = $jqorig('#idsexpose_type_feed option:selected').val();
+  if (type === 'posts') {
+    $jqorig('#idsexpose_select_posts').show();
+    $jqorig('#idsexpose_select_categories').hide();
+  }
+  else {
+    $jqorig('#idsexpose_select_posts').hide();
+    $jqorig('#idsexpose_select_categories').show();
+  }
+  changeFeedFilters();
+}
+
+function changeFeedFilters() {
+  var feed_type = $jqorig('#idsexpose_type_feed option:selected').val();
+  var type = $jqorig('#idsexpose_' + feed_type + ' option:selected').val();
+  $jqorig('.idsexpose_filters').hide();
+  $jqorig('.idsexpose_filters_' + type).show();
+  $jqorig('#idsexpose_' + feed_type + '_cats_op').val('OR');
+  generateFeedUrl();
+}
+
+function generateFeedUrl() {
+  var feed_type = $jqorig('#idsexpose_type_feed option:selected').val();
+  var query_string = $jqorig('#idsexpose_original_' + feed_type + '_url').val();
+  var type = $jqorig('#idsexpose_' + feed_type + ' option:selected').val();
+  var num_items = $jqorig('#idsexpose_num_items').val();
+  if (type) {
+    if (feed_type === 'posts') {
+      query_string += '&post_type=' + type;
+    }
+    else {
+      query_string += '&taxonomy=' + type;
+    }
+  }
+  if (num_items) {
+    query_string += '&num_items=' + num_items;
+  }
+  var num_cats = 0;
+  $jqorig('.idsexpose_' + type +'_taxonomy_select').each(function(i, taxonomy){
+    var tax_name = $jqorig(taxonomy).attr("id");
+    var tax_values = $jqorig('#' + tax_name + ' option:selected').map(function(){ return this.value }).get();
+    if (tax_values.length !== 0) {
+      num_cats++;
+      var string_values = tax_values.join('|');
+      var tax_query = tax_name.split('-');
+      query_string += '&cats[' + tax_query[1] + ']=' + string_values;
+    }
+  });
+  if (num_cats > 1) {
+    var cats_op = $jqorig('#idsexpose_' + feed_type + '_cats_op').val();
+    if (cats_op) {
+      query_string += '&cats_op=' + cats_op;
+    }
+  }
+  if (query_string) {
+    $jqorig('#idsexpose_feed_url').val(query_string);
+  }
+}
+
+function gotoFeed() {
+  var feed_url = $jqorig('#idsexpose_feed_url').val();
+  window.open(feed_url,'_blank');
+}
+
 function changeDataset() {
   selected_dataset = $jqorig("#radio_dataset input[type='radio']:checked").val();
   $jqorig.each(['eldis', 'bridge'], function(i, dataset) { 
@@ -244,12 +321,23 @@ function loadAdminPage() {
 		});
 		$jqorig(".ui-tabs").tabs({ fx: { opacity: "toggle", duration: "fast" } });
 	});
-  initCategoriesArrays();
-  populateSelectBoxes();
-  changeMappingsSettings();
-  changeNewCategories();
-  $jqorig("#ids_import_user_select").change(updateUsername); 
-  $jqorig("#ids_import_user").change(updateDefaultUser);
+  if (ids_plugin == 'idsexpose') {
+    changeFields();
+    changeFeedType();
+  }
+  else if (ids_plugin == 'idsimport' || ids_plugin == 'idsview') {
+    initCategoriesArrays();
+    populateSelectBoxes();
+    if (ids_plugin == 'idsview') {
+      changeDataset();
+    }
+    else if (ids_plugin == 'idsimport') {
+      changeMappingsSettings();
+      changeNewCategories();
+      $jqorig("#ids_import_user_select").change(updateUsername); 
+      $jqorig("#ids_import_user").change(updateDefaultUser);
+    }
+  }
 }
 
 if (window.addEventListener) {

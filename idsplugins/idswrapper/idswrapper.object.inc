@@ -38,7 +38,8 @@ class IdsApiObject {
    *
    * @return a new IdsApiObject object
    */
-  public static function factory($object, $format, $object_type) {
+  // TODO: Check parameters. $format not used any more???
+  public static function factory($object, $object_type) {
     switch ($object_type) {
       case 'assets':
         return new IdsApiObjectAsset($object);
@@ -69,10 +70,16 @@ class IdsApiObject {
    * Constructor.
    */
   public function __construct($object) {
-    // Basic fields, present always in all responses.
-    $this->object_id = $object['object_id'];
-    $this->object_type = $object['object_type'];
-    $this->metadata_url = $object['metadata_url'];
+    // Basic fields, present in all responses.
+    if (isset($object['object_id'])) {
+      $this->object_id = $object['object_id'];
+    }
+    if (isset($object['object_type'])) {
+      $this->object_type = $object['object_type'];
+    }
+    if (isset($object['metadata_url'])) {
+      $this->metadata_url = $object['metadata_url'];
+    }
     // Additional properties common to all objects that might be present.
     if (isset($object['site'])) {
       $this->site = $object['site'];

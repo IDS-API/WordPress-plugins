@@ -4,7 +4,6 @@
 
 // Creates new post types for IDS assets.
 function ids_post_types_init() {
-  global $wpdb;
   $ids_post_types = array('documents' => 'Document', 'organisations' => 'Organisations');
   foreach ($ids_post_types as $post_type => $singular_name) {
     $post_type_name = 'ids_' . $post_type;
@@ -65,3 +64,46 @@ function ids_new_post_type($post_type_name, $post_type_label, $singular_name) {
     $wp_rewrite->flush_rules();
   }
 }
+
+//----------------------------------- Retrieve custom types / taxonomies ---------------------------
+
+
+// TODO: This is a temporary solution.
+// Change this once the custom fields are defined independently for each custom type/taxonomy (see idsimport.importer.inc and idsimport.metadata.inc).
+// This is only for IDS taxonomies, as there is no standard way of implementing custom fields in Wordpress taxonomies.
+function ids_get_taxonomy_custom_fields($dataset_type) {
+  list($site, $type) = explode('_', $dataset_type);
+  $object['site'] = $site;
+  $fields = array_keys(get_class_vars(get_class(IdsApiObject::factory($object, $type))));
+  return $fields;
+}
+
+// This is general, for any custom type.
+function ids_get_type_custom_fields($post_type) {
+  $custom_fields = array();
+  $keys = get_meta_keys();
+  if ($keys) {
+    natcasesort($keys);
+    foreach ($keys as $key) {
+      if (is_protected_meta($key, $post_type)) continue;
+      $custom_fields[$key] = $key;
+    }
+  }
+  return $custom_fields;
+}
+
+// This is for Wordpress default posts.
+function ids_get_default_fields($post_type) {
+  $default_fields = array();
+  $post = get_default_post_to_edit($post_type);
+  foreach ($post as $field => $value) {
+    $default_fields[$field] = $field;
+  }
+  return $default_fields;
+}
+
+
+
+
+
+

@@ -47,7 +47,7 @@ add_action('admin_menu', 'idsview_add_menu', 9);
 add_action('admin_notices', 'idsview_admin_notices');
 add_filter('plugin_action_links', 'idsview_plugin_action_links', 10, 2);
 add_action('wp_enqueue_scripts', 'idsview_add_stylesheet');
-add_action('admin_enqueue_scripts', 'idsview_add_stylesheet');
+add_action('admin_enqueue_scripts', 'idsview_add_admin_stylesheet');
 add_action('admin_enqueue_scripts', 'idsview_add_javascript');
 add_filter('query_vars', 'idsview_query_vars' );
 add_filter('get_pagenum_link', 'idsview_append_offset');
@@ -101,7 +101,7 @@ function idsview_activate() {
 // Initialize plugin. Create custom post types (ids_documents/ids_organisations) if they do not exist.
 function idsview_init() {
   ids_post_types_init();
-  idsview_check_permalinks_changed();
+  ids_check_permalinks_changed('idsview');
 }
 
 // Clean up on deactivation.
@@ -176,7 +176,7 @@ function idsview_register_widget() {
 function idsview_add_menu() {
   $idsview_menu_title = idsapi_variable_get('idsview', 'menu_title', IDS_VIEW_MENU_TITLE);
   add_menu_page('IDS View', $idsview_menu_title, 'manage_options', 'idsview_menu', 'idsview_general_page', plugins_url('images/ids.png', __FILE__));
-  add_submenu_page( 'idsview_menu', 'Administration', 'Administration', 'manage_options', 'idsview_menu');
+  add_submenu_page( 'idsview_menu', 'IDS View', 'IDS View', 'manage_options', 'idsview_menu');
   add_submenu_page( 'idsview_menu', 'Settings', 'Settings', 'manage_options', 'options-general.php?page=idsview');
   add_submenu_page( 'idsview_menu', 'Help', 'Help', 'manage_options', 'idsview_help', 'idsview_help_page');
 }
@@ -329,16 +329,19 @@ function idsview_help_page() {
 <?php
 }
 
-// Enqueue stylesheet
+// Enqueue stylesheet. We keep separate functions as in the future we might want to use different stylesheets for each plugin.
 function idsview_add_stylesheet() {
-    wp_register_style('idsview_style', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'idsplugins.css', __FILE__));
-    wp_enqueue_style('idsview_style');
+  wp_register_style('idsview_style', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'idsplugins.css', __FILE__));
+  wp_enqueue_style('idsview_style');
+}
 
-    wp_register_style('idsview_chosen_style', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'chosen/chosen.css', __FILE__));
-    wp_enqueue_style('idsview_chosen_style');
-
-    wp_register_style('idsview_jqwidgets_style', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'jqwidgets/styles/jqx.base.css', __FILE__));
-    wp_enqueue_style('idsview_jqwidgets_style');
+// Enqueue admin stylesheet
+function idsview_add_admin_stylesheet() {
+  idsview_add_stylesheet();
+  wp_register_style('idsview_chosen_style', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'chosen/chosen.css', __FILE__));
+  wp_enqueue_style('idsview_chosen_style');
+  wp_register_style('idsview_jqwidgets_style', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'jqwidgets/styles/jqx.base.css', __FILE__));
+  wp_enqueue_style('idsview_jqwidgets_style');
 }
 
 // Enqueue javascript
@@ -384,7 +387,7 @@ function idsview_add_javascript($hook) {
       $themes[$dataset] = idsapi_variable_get('idsview', $dataset . '_themes_assets', array());
     }
     $categories = array('countries' => $countries, 'regions' => $regions, 'themes' => $themes);
-    ids_init_javascript($api_key, $api_key_validated, $default_dataset, $categories);
+    ids_init_javascript('idsview', $api_key, $api_key_validated, $default_dataset, $categories);
   }
 }
 
@@ -402,28 +405,36 @@ function idsview_query_vars($query_vars) {
 
 function idsview_append_offset($link) {
   global $wp_query;
-  $current_page_num = (get_query_var('paged')) ? get_query_var('paged') : 1;
-  $ids_offset = (get_query_var('ids_offset')) ? get_query_var('ids_offset') : 0;
-  $prev_offset = (get_query_var('prev_offset')) ? get_query_var('prev_offset') : 0;
-  $num_excluded = (get_query_var('num_excluded')) ? get_query_var('num_excluded') : 0;
-  $posts_per_page = (get_query_var('posts_per_page')) ? get_query_var('posts_per_page') : 1;
-  parse_str($link, $query_array);
-  if (isset($query_array['paged'])) {
-    $linked_page_num = $query_array['paged'];
+/*
+  global $post;
+  $idsview_
+  echo 'POST ';
+  print_r($post);
+*/
+  if (isset($wp_query->query_vars['ids_offset'])) { 
+    $ids_offset = (get_query_var('ids_offset')) ? get_query_var('ids_offset') : 0;
+    $current_page_num = (get_query_var('paged')) ? get_query_var('paged') : 1;
+    $prev_offset = (get_query_var('prev_offset')) ? get_query_var('prev_offset') : 0;
+    $num_excluded = (get_query_var('num_excluded')) ? get_query_var('num_excluded') : 0;
+    $posts_per_page = (get_query_var('posts_per_page')) ? get_query_var('posts_per_page') : 1;
+    parse_str($link, $query_array);
+    if (isset($query_array['paged'])) {
+      $linked_page_num = $query_array['paged'];
+    }
+    else {
+      $linked_page_num = 0;
+    }
+    if ($linked_page_num == $current_page_num + 1) {
+      $offset = $ids_offset;
+    }
+    elseif ($linked_page_num == $current_page_num - 1) {
+      $offset = ($prev_offset > $posts_per_page+$num_excluded) ? $prev_offset-($posts_per_page+$num_excluded) : 0;
+    }
+    else {
+      $offset = $posts_per_page*$linked_page_num;
+    }
+    $link = add_query_arg('ids_offset', $offset, $link);
   }
-  else {
-    $linked_page_num = 0;
-  }
-  if ($linked_page_num == $current_page_num + 1) {
-    $offset = $ids_offset;
-  }
-  elseif ($linked_page_num == $current_page_num - 1) {
-    $offset = ($prev_offset > $posts_per_page+$num_excluded) ? $prev_offset-($posts_per_page+$num_excluded) : 0;
-  }
-  else {
-    $offset = $posts_per_page*$linked_page_num;
-  }
-  $link = add_query_arg('ids_offset', $offset, $link);
   return $link;
 }
 

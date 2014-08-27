@@ -291,7 +291,8 @@ class IdsApiWrapper {
       }
       $this->cacheSet(array($results, $total_results));
     }
-    $response = new IdsApiResponse($results, $this->request->getFormat(), $object_type, $total_results, $this->request->getSite(), $cached);
+    //$response = new IdsApiResponse($results, $this->request->getFormat(), $object_type, $total_results, $this->request->getSite(), $cached);
+    $response = new IdsApiResponse($results, $object_type, $total_results, $this->request->getSite(), $cached);
     return $response;
   }
 

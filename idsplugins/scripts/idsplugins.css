@@ -113,7 +113,7 @@ li.cat-item  p  a{
 
 /* Admin page */
 
-.clear, #ids_import p.submit, #ids_import .wrap p, #ids_import .wrap h3, div#tips {
+.clear, #ids_import p.submit, #ids_import .ids-wrap p, #ids_import .ids-wrap h3, div#tips {
   clear: both;
 } 	
 
@@ -168,7 +168,7 @@ li.cat-item  p  a{
   clear: both;
 }
 
-.wrap h3 {
+.ids-wrap h3 {
   display: none;
 }
 

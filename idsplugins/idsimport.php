@@ -48,7 +48,6 @@ add_action('admin_menu', 'idsimport_add_menu', 9);
 add_action('admin_menu', 'idsimport_remove_submenu_pages');
 add_action('admin_notices', 'idsimport_admin_notices');
 add_action('wp_enqueue_scripts', 'idsimport_add_stylesheet');
-add_action('admin_enqueue_scripts', 'idsimport_add_stylesheet');
 add_action('admin_enqueue_scripts', 'idsimport_add_admin_stylesheet');
 add_action('admin_enqueue_scripts', 'idsimport_add_javascript');
 add_filter('plugin_action_links', 'idsimport_plugin_action_links', 10, 2);
@@ -128,17 +127,23 @@ function idsimport_admin_init(){
 // Create new custom taxonomies for the IDS categories.
 function idsimport_taxonomies_init() {
   $ids_taxonomies = array('countries' => 'Country', 'regions' => 'Region', 'themes' => 'Theme');
-  //$datasets = idsimport_get_datasets();
   global $ids_datasets;
   idsimport_create_taxonomy_metadata();
-  foreach ($ids_datasets as $dataset) {
+  $default_dataset = idsapi_variable_get('idsimport', 'default_dataset', IDS_API_DEFAULT_DATASET);
+  if ($default_dataset == 'all') {
+    $datasets = $ids_datasets;
+  }
+  else {
+    $datasets = array($default_dataset);
+  }
+  foreach ($datasets as $dataset) {
     foreach ($ids_taxonomies as $taxonomy => $singular_name) {
       $taxonomy_name = $dataset . '_' . $taxonomy;
       $taxonomy_label = ucfirst($dataset) . ' ' . ucfirst($taxonomy);
       $singular_name = ucfirst($dataset) . ' ' . $singular_name;
       idsimport_new_taxonomy($taxonomy_name, $taxonomy_label, $singular_name, TRUE);
       // Add additional fields in the imported categories' 'edit' page.
-      $form_fields_hook = $dataset . '_' . $taxonomy . '_' . 'edit_form_fields';
+      $form_fields_hook = $taxonomy_name . '_' . 'edit_form_fields';
       $new_metabox = 'idsimport_' . $taxonomy . '_metabox_edit';
       add_action($form_fields_hook, $new_metabox, 10, 1);
       // Add additional columns in edit-tags.php.
@@ -201,13 +206,15 @@ function idsimport_new_taxonomy($taxonomy_name, $taxonomy_label, $singular_name,
       );
     register_taxonomy(
       $taxonomy_name,
-      // Uncomment to make IDS taxonomies available to regular posts, too.
-      // array ('post', 'ids_documents', 'ids_organisations'),
       array ('ids_documents', 'ids_organisations'),
       $args
     );
-    $wp_rewrite->flush_rules();
   }
+  $idsimport_new_categories = idsapi_variable_get('idsimport', 'import_new_categories', IDS_IMPORT_NEW_CATEGORIES);
+  if (($idsimport_new_categories) && taxonomy_exists($taxonomy_name)) {
+    register_taxonomy_for_object_type($taxonomy_name, 'post');
+  }
+  $wp_rewrite->flush_rules();
 }
 
 // Mark posts as pending.
@@ -226,29 +233,19 @@ function idsimport_unpublish_assets($post_type, $dataset) {
 // If selected, include imported documents and organisations in the loop.
 function idsimport_include_idsassets_loop($query) {
   if ((is_home() && $query->is_main_query()) || is_category() || is_feed() ) {
+    $post_types = $query->get('post_type');
     $idsimport_include_imported_documents = idsapi_variable_get('idsimport', 'include_imported_documents', IDS_IMPORT_INCLUDE_IMPORTED_DOCUMENTS);
     $idsimport_include_imported_organisations = idsapi_variable_get('idsimport', 'include_imported_organisations', IDS_IMPORT_INCLUDE_IMPORTED_ORGANISATIONS);
-
-    // Type of IDS assets to show by default, according to the plugin settings.
-    $all_post_types = get_post_types();
-    if (!$idsimport_include_imported_documents) {
-      unset($all_post_types['ids_documents']);
+    if (empty($post_types) && ($idsimport_include_imported_documents || $idsimport_include_imported_organisations)) {
+      $all_post_types = array('post');
+      if ($idsimport_include_imported_documents) {
+        $all_post_types[] = 'ids_documents';
+      }
+      if ($idsimport_include_imported_organisations) {
+        $all_post_types[] = 'ids_organisations';
+      }
+      $query->set('post_type', $all_post_types);
     }
-    if (!$idsimport_include_imported_organisations) {
-      unset($all_post_types['ids_organisations']);
-    }   
-    // If the post type is filtered in the URL.
-    $post_type = get_query_var('post_type');
-    if (empty($post_type)) {
-      $post_types = $all_post_types;
-    }
-    elseif (is_string($post_type)) {
-      $post_types = array($post_type);
-    }
-    elseif (is_array($post_type)) {
-      $post_types = array_merge($post_type, $all_post_types);
-    }
-    $query->set('post_type', $post_types);
   }
 }
 
@@ -296,14 +293,11 @@ function idsimport_query_vars($query_vars) {
 }
 
 function idsimport_filter_posts($query) {
-  $display_sites = idsimport_display_datasets('public');
-  if(isset($_GET['ids_site'])) {
-    $site = $_GET['ids_site'];
-    if (($site == 'eldis') || ($site == 'bridge')) {
-      $query->set('meta_key', 'site');
-      $query->set('meta_value', $site);
-    }
-	}
+  $site = (get_query_var('ids_site')) ? get_query_var('ids_site') : '';
+  if (($site == 'eldis') || ($site == 'bridge')) {
+    $query->set('meta_key', 'site');
+    $query->set('meta_value', $site);
+  }
 	return $query;  
 }
 
@@ -323,9 +317,9 @@ function idsimport_add_menu() {
   $datasets = idsimport_display_datasets('admin');
 
   add_menu_page('IDS API', $idsimport_menu_title, 'manage_options', 'idsimport_menu', 'idsimport_general_page', plugins_url('images/ids.png', __FILE__));
-  add_submenu_page( 'idsimport_menu', 'Administration', 'Administration', 'manage_options', 'idsimport_menu');
+  add_submenu_page( 'idsimport_menu', 'IDS Import', 'IDS Import', 'manage_options', 'idsimport_menu');
   add_submenu_page( 'idsimport_menu', 'Settings', 'Settings', 'manage_options', 'options-general.php?page=idsimport');
-  add_submenu_page( 'idsimport_menu', 'IDS Importer', 'IDS Importer', 'manage_options', 'admin.php?import=idsimport_importer');
+  add_submenu_page( 'idsimport_menu', 'Importer', 'Importer', 'manage_options', 'admin.php?import=idsimport_importer');
 
   if (in_array('eldis', $datasets) && in_array('bridge', $datasets)) {
     add_submenu_page( 'idsimport_menu', 'All IDS Documents', 'All IDS Documents', 'manage_options', 'edit.php?post_type=ids_documents');
@@ -380,7 +374,7 @@ function idsimport_plugin_action_links($links, $file) {
 	return $links;
 }
 
-// Enqueue stylesheet
+// Enqueue stylesheet. We keep separate functions as in the future we might want to use different stylesheets for each plugin.
 function idsimport_add_stylesheet() {
     wp_register_style('idsimport_style', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'idsplugins.css', __FILE__));
     wp_enqueue_style('idsimport_style');
@@ -388,6 +382,7 @@ function idsimport_add_stylesheet() {
 
 // Enqueue stylesheet
 function idsimport_add_admin_stylesheet() {
+    idsimport_add_stylesheet();
     wp_register_style('idsimport_chosen_style', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'chosen/chosen.css', __FILE__));
     wp_enqueue_style('idsimport_chosen_style');
     wp_register_style('idsimport_jqwidgets_style', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'jqwidgets/styles/jqx.base.css', __FILE__));
@@ -430,7 +425,7 @@ function idsimport_add_javascript($hook) {
 
     $api_key = idsapi_variable_get('idsimport', 'api_key', '');
     $api_key_validated = idsapi_variable_get('idsimport', 'api_key_validated', FALSE);
-    $default_dataset = idsapi_variable_get('idsimport', 'default_dataset', 'eldis');
+    $default_dataset = idsapi_variable_get('idsimport', 'default_dataset', IDS_API_DEFAULT_DATASET);
     foreach ($ids_datasets as $dataset) {
       $countries[$dataset] = idsapi_variable_get('idsimport', $dataset . '_countries_assets', array());
       $regions[$dataset] = idsapi_variable_get('idsimport', $dataset . '_regions_assets', array());
@@ -442,7 +437,7 @@ function idsimport_add_javascript($hook) {
     $categories = array('countries' => $countries, 'regions' => $regions, 'themes' => $themes);
     $categories_mappings = array('countries' => $countries_mappings, 'regions' => $regions_mappings, 'themes' => $themes_mappings);
     $default_user = idsapi_variable_get('idsimport', 'import_user', IDS_IMPORT_IMPORT_USER);
-    ids_init_javascript($api_key, $api_key_validated, $default_dataset, $categories, $categories_mappings, $default_user);
+    ids_init_javascript('idsimport', $api_key, $api_key_validated, $default_dataset, $categories, $categories_mappings, $default_user);
   }
 }
 

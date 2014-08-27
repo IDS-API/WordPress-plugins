@@ -311,7 +311,8 @@ function idsimport_render_form() {
 
   $idsimport_api_key_validated = idsapi_variable_get('idsimport', 'api_key_validated', FALSE);
 	?>
-	<div class="wrap">
+  <div class="wrap">
+	<div class="ids-wrap">
 		<!-- Display Plugin Icon, Header, and Description -->
 		<div class="icon32" id="icon-options-general"></div>
 		<h2><?php _e('IDS Import Plugin Settings'); ?></h2>
@@ -415,7 +416,7 @@ function idsimport_render_form() {
         <tr>
           <th scope="row"><?php _e('Additional languages'); ?></th>
           <td>
-            <?php echo ids_select_box('idsimport_options[additional_languages][]', 'idsimport_additional_languages', ids_languages(), idsapi_variable_get('idsimport', 'additional_languages', array()), TRUE); ?>
+            <?php echo ids_select_box('idsimport_options[additional_languages][]', 'idsimport_additional_languages', ids_languages(), idsapi_variable_get('idsimport', 'additional_languages', array()), array('multiple' => 'multiple')); ?>
             <a href="javascript:deselectAll('idsimport_additional_languages');"><?php _e('Deselect all'); ?></a>
             <p class="description">
             <?php _e('If available, metadata in the selected languages (title, description) will be imported, in addition to the one in the default language.'); ?>
@@ -590,7 +591,7 @@ function idsimport_render_form() {
         <tr>
           <th scope="row"><?php _e('Resources\' languages'); ?></th>
           <td>
-            <?php echo ids_select_box('idsimport_options[language_name_codes][]', 'idsimport_language_name_codes', ids_languages(), idsapi_variable_get('idsimport', 'language_name_codes', array()), TRUE); ?>
+            <?php echo ids_select_box('idsimport_options[language_name_codes][]', 'idsimport_language_name_codes', ids_languages(), idsapi_variable_get('idsimport', 'language_name_codes', array()), array('multiple' => 'multiple')); ?>
             <a href="javascript:deselectAll('idsimport_language_name_codes');"><?php _e('Deselect all'); ?></a>
             <p class="description">
             <?php _e('Only import resources that are available in the selected languages. If none is selected, resources in all languages will be imported.'); ?>
@@ -782,7 +783,7 @@ function idsimport_render_form() {
                 </td>
                 <td class="ids-categories-container">
                   <p class="description"><?php _e("Map selected $category to:"); ?></p>
-                  <?php echo ids_select_box($field_id_target, $field_id_target, $wp_categories_select, array(), FALSE, 'ids-mapping-select'); ?>
+                  <?php echo ids_select_box($field_id_target, $field_id_target, $wp_categories_select, array(), array('class' => 'ids-mapping-select')); ?>
                   <br /><br />
                   <p class="description"><a href="javascript:addMappings('<?php echo $field_id_source; ?>', '<?php echo $field_id_target; ?>', '<?php echo $field_id_mappings; ?>');"><?php _e('Add mapping'); ?> &rarr;</a></p>
                 </td>
@@ -858,18 +859,15 @@ function idsimport_render_form() {
       </p>
 
     <?php } else { // If API key is not validated ?>
-
       </table>
-    </div>	<!-- UI tabs -->	
-
       <p class="submit ids-import-settings-message">
         <?php _e('Please validate your IDS API key in order to continue setting the plugin options.'); ?>
         <input name="idsimport_options[submit_validate]" type="submit" class="button-primary" value="<?php _e('Validate') ?>" />
       </p>
     <?php } ?>
-
 		</form>
-	</div> <!-- wrap -->
+    </div>	<!-- ids-wrap -->	
+  </div><!-- wrap -->
 	<?php	
 }
 
@@ -991,6 +989,7 @@ function idsimport_categories_page($dataset, $category) {
   wp_list_categories($args);
   ?>
   </ul>
+  </div>
 <?php
 }
 
@@ -1106,6 +1105,7 @@ function idsimport_help_page() {
   <?php _e('For terms and condition for using API see'); ?> <a href="http://api.ids.ac.uk/about/terms/" target="_new"><?php _e('here'); ?></a>.
   </p>
 
+  </div>
 <?php
 }
 

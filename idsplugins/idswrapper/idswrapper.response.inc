@@ -38,7 +38,8 @@ class IdsApiResponse {
   * @param string $default_site - dataset ('eldis', 'bridge').
   * @param bool $cached - indicates if the response was retrieved from the cache.
   */
-  function __construct($results, $format, $type_results, $total_results, $default_site, $cached = FALSE) {
+  //function __construct($results, $format, $type_results, $total_results, $default_site, $cached = FALSE) {
+  function __construct($results, $type_results, $total_results, $default_site, $cached = FALSE) {
     $this->results = array();
     if (!is_array($results)) {
       $this->is_error = TRUE;
@@ -52,7 +53,7 @@ class IdsApiResponse {
         if (!isset($object['site'])) {
           $object['site'] = $default_site;
         }
-        $ids_api_object = IdsApiObject::factory($object, $format, $type_results, $default_site);
+        $ids_api_object = IdsApiObject::factory($object, $type_results);
         array_push($this->results, $ids_api_object);
       }
     }

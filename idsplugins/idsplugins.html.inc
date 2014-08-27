@@ -138,18 +138,15 @@ function ids_show_message($message, $visibility = 'block') {
 }
 
 // Generate select boxes.
-function  ids_select_box($select_name, $id, $items, $selected_values = array(), $multiple = FALSE, $class = FALSE) {
+function  ids_select_box($select_name, $id, $items, $selected_values = array(), $attributes=array()) {
 	$html = "<select id='$id' name='$select_name'";
-  if ($multiple) {
-    $html .= ' multiple="multiple"';
-  }
-  if ($class) {
-    $html .= ' class="' . $class . '"';
+  if (!empty($attributes)) {
+    foreach ($attributes as $attr_name => $attr_value) {
+      $html .= ' ' . $attr_name . '="' . $attr_value . '"';
+    }
   }
   $html .= '>';
-  $keys = array_keys($items);
-	foreach($keys as $key) {
-    $value = $items[$key];
+	foreach($items as $key => $value) {
     $html .= "<option value='$key' ";
     if (in_array($key, $selected_values)) {
       $html .= 'selected';
@@ -268,7 +265,7 @@ function ids_php2js($php_array = array()) {
 }
 
 // Initialize category arrays for each dataset in a javascript variable, default dataset and keep track of selected categories.
-function ids_init_javascript($api_key, $api_key_validated, $default_dataset, $categories, $categories_mappings = array(), $default_user = FALSE) {
+function ids_init_javascript($plugin, $api_key = '', $api_key_validated = FALSE, $default_dataset = IDS_API_DEFAULT_DATASET, $categories = array(), $categories_mappings = array(), $default_user = FALSE) {
   global $ids_datasets;
   ?>
   <script type="text/javascript">
@@ -277,31 +274,29 @@ function ids_init_javascript($api_key, $api_key_validated, $default_dataset, $ca
   var $jqchosen = jQuery.noConflict();
   </script>
   <script type="text/javascript">
-
+  ids_plugin = '<?php echo $plugin; ?>';
+  default_dataset = '<?php echo $default_dataset; ?>';
+  ids_array_trees_themes = {'eldis':{}, 'bridge':{}};
   ids_array_categories = {'eldis':{'countries':{}, 'regions':{}, 'themes':{}}, 'bridge':{'countries':{}, 'regions':{}, 'themes':{}}};
   ids_array_categories_mappings = {'eldis':{'countries':{}, 'regions':{}, 'themes':{}}, 'bridge':{'countries':{}, 'regions':{}, 'themes':{}}};
-
-  ids_array_trees_themes = {'eldis':{}, 'bridge':{}};
-
-  selected_categories = {'eldis':{}, 'bridge':{}};
   selected_categories_mappings = {'eldis':{}, 'bridge':{}};
-
-  default_dataset = '<?php echo $default_dataset; ?>';
-
-  /* Arrays with previously selected categories and mappings */
+  selected_categories = {'eldis':{}, 'bridge':{}};
+  /* Arrays with previously selected category filters and mappings */
   <?php foreach ($ids_datasets as $dataset) { ?>
-  selected_categories['<?php echo $dataset; ?>'] = {
-    'countries':<?php echo ids_php2js($categories['countries'][$dataset]); ?>,
-    'regions':<?php echo ids_php2js($categories['regions'][$dataset]); ?>,
-    'themes':<?php echo ids_php2js($categories['themes'][$dataset]); ?>
-  };
-  <?php if (!empty($categories_mappings)) { ?>
-  selected_categories_mappings['<?php echo $dataset; ?>'] = {
-    'countries':<?php echo ids_php2js($categories_mappings['countries'][$dataset]); ?>,
-    'regions':<?php echo ids_php2js($categories_mappings['regions'][$dataset]); ?>,
-    'themes':<?php echo ids_php2js($categories_mappings['themes'][$dataset]); ?>
-  };
-  <?php } ?>
+    <?php if (!empty($categories)) { ?>
+      selected_categories['<?php echo $dataset; ?>'] = {
+        'countries':<?php echo ids_php2js($categories['countries'][$dataset]); ?>,
+        'regions':<?php echo ids_php2js($categories['regions'][$dataset]); ?>,
+        'themes':<?php echo ids_php2js($categories['themes'][$dataset]); ?>
+      };
+    <?php } ?>
+    <?php if (!empty($categories_mappings)) { ?>
+      selected_categories_mappings['<?php echo $dataset; ?>'] = {
+        'countries':<?php echo ids_php2js($categories_mappings['countries'][$dataset]); ?>,
+        'regions':<?php echo ids_php2js($categories_mappings['regions'][$dataset]); ?>,
+        'themes':<?php echo ids_php2js($categories_mappings['themes'][$dataset]); ?>
+      };
+    <?php } ?>
   <?php } ?>
 
   function initCategoriesArrays() {
@@ -322,8 +317,8 @@ function ids_init_javascript($api_key, $api_key_validated, $default_dataset, $ca
   }
   ?>
   }
-
-  <?php if ($default_user) { ?>
+  
+  <?php if ($plugin == 'idsimport' && $default_user) { ?>
   default_user = '<?php echo $default_user; ?>';
   <?php } ?>
   </script>

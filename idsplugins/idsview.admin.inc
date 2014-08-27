@@ -27,17 +27,6 @@ function idsview_get_datasets() {
   return $datasets;
 }
 
-// Check if the permalinks configuration was changed and we need to flush the rules.
-function idsview_check_permalinks_changed() {
-  global $wp_rewrite;
-  $idsview_permalinks = idsapi_variable_get('idsview', 'permalink_structure', '');
-  $current_permalinks = get_option('permalink_structure');
-  if ($idsview_permalinks !== $current_permalinks) {
-    idsapi_variable_set('idsview', 'permalink_structure', $current_permalinks);
-    $wp_rewrite->flush_rules();
-  }
-}
-
 // When a dataset is disabled, the status of the page that shows its content is changed to 'pending'.
 function idsview_update_pages_status() {
   global $ids_datasets;
@@ -69,7 +58,8 @@ function idsview_render_form() {
 
   $idsview_api_key_validated = idsapi_variable_get('idsview', 'api_key_validated', FALSE);
 	?>
-	<div class="wrap">
+  <div class = "wrap">
+	<div class="ids-wrap">
 		<!-- Display Plugin Icon, Header, and Description -->
 		<div class="icon32" id="icon-options-general"></div>
 		<h2><?php _e('IDS View Plugin Settings'); ?></h2>
@@ -215,8 +205,6 @@ function idsview_render_form() {
           </td>
         </tr>
 
-
-
         <?php } // foreach dataset ?>
 
         <tr>
@@ -238,7 +226,7 @@ function idsview_render_form() {
         <tr>
           <th scope="row"><?php _e('Resources\' languages'); ?></th>
           <td>
-            <?php echo ids_select_box('idsview_options[language_name_codes][]', 'idsview_language_name_codes', ids_languages(), idsapi_variable_get('idsview', 'language_name_codes', array()), TRUE); ?>
+            <?php echo ids_select_box('idsview_options[language_name_codes][]', 'idsview_language_name_codes', ids_languages(), idsapi_variable_get('idsview', 'language_name_codes', array()), array('multiple' => 'multiple')); ?>
             <a href="javascript:deselectAll('idsview_language_name_codes');"><?php _e('Deselect all'); ?></a>
             <p class="description">
             <?php _e('Only display resources that are available in the selected languages. If none is selected, resources in all languages will be displayed.'); ?>
@@ -309,14 +297,13 @@ function idsview_render_form() {
       </p>
       <?php } ?>
 		</form>
+    </div>
+  </div>
   <?php
 }
 
 // Validate input and the API key.
 function idsview_validate_options($input) {
-
-  //print_r($input);
-
   $idsapi = new IdsApiWrapper;
   $error = FALSE;
   $error_message = '';
