@@ -674,8 +674,8 @@ function idsview_get_assets($dataset, $assets_type, $num_items, $offset, $filter
 }
 
 // Display category title for archive-like listings.
-function idsview_category_title($dataset=IDS_API_DEFAULT_DATASET, $before='', $after='') {
-  $title = $dataset;
+function idsview_category_title($dataset=IDS_API_DEFAULT_DATASET) {
+  $title = '';
   $cat_id = 0;
   $api_key = idsapi_variable_get('idsview', 'api_key', FALSE);
   if ($api_key) {
@@ -696,7 +696,7 @@ function idsview_category_title($dataset=IDS_API_DEFAULT_DATASET, $before='', $a
       }
     }
   }
-  echo $before . $title . $after;
+  return $title;
 }
 
 // A single object is being displayed.

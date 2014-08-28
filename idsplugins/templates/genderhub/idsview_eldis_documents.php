@@ -8,7 +8,11 @@ get_header(); ?>
   <?php if ( !idsview_is_single() ) { ?>
     <header class="archive-header">
       <h1 class="archive-title">
-      <?php idsview_category_title('eldis', 'Results for: ');	?>
+        <?php if ( $category_title = idsview_category_title('eldis') ) { ?>
+          <?php printf(__('Results for: %s'), $category_title ); 	?>
+        <?php } else { ?>
+          Resource library
+        <?php } ?>
       </h1>
     </header><!-- .archive-header -->
   <?php } ?>
