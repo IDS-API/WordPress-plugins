@@ -57,6 +57,7 @@ add_filter('cron_schedules', 'idsimport_cron_intervals');
 add_action('idsimport_scheduled_events', 'idsimport_run_periodic_imports', 10, 1);
 add_filter('wp_get_object_terms', 'idsimport_filter_get_object_terms');
 add_filter('the_category', 'idsimport_filter_the_category');
+add_filter('single_term_title', 'idsimport_filter_the_category');
 add_filter('list_cats', 'idsimport_filter_list_cats');
 add_filter('request', 'idsimport_filter_imported_tags');
 add_filter('query_vars', 'idsimport_query_vars');

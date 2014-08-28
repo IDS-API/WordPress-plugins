@@ -110,11 +110,13 @@ function ids_themes($before='', $sep=', ', $after='', $base_url='') {
 function ids_get_list_categories($post_id, $category, $before, $sep, $after) {
   global $ids_datasets;
   $terms='';
-  foreach ($ids_datasets as $dataset) {
-    $taxonomy_name = $dataset . '_' . $category;
-    if (taxonomy_exists($taxonomy_name)) {
-      if ($list_terms = get_the_term_list($post_id, $taxonomy_name, $before, $sep, $after)) {
-        $terms .= $list_terms;
+  if (!get_page_template_slug($post_id)) {
+    foreach ($ids_datasets as $dataset) {
+      $taxonomy_name = $dataset . '_' . $category;
+      if (taxonomy_exists($taxonomy_name)) {
+        if ($list_terms = get_the_term_list($post_id, $taxonomy_name, $before, $sep, $after)) {
+          $terms .= $list_terms;
+        }
       }
     }
   }

@@ -193,7 +193,6 @@ function idsview_general_page() {
   <u class="ids-category-list">
     <li class="cat-item"> <a href="<?php echo get_admin_url() . 'options-general.php?page=idsview' ?>"><?php _e('Settings'); ?></a></li>
     <li class="cat-item"> <a href="<?php echo get_admin_url() . 'admin.php?page=idsview_help' ?>"><?php _e('Help'); ?></a></li>
-
   <?php
   foreach ($datasets as $dataset) {
     foreach ($ids_assets as $type) {
@@ -221,39 +220,30 @@ function idsview_help_page() {
 ?>
   <div class="wrap">
   <div id="icon-edit-comments" class="icon32 icon32-posts-page"><br /></div>
-
   <h2><?php _e('Help'); ?></h2>
-
   <p>
   <?php _e('The IDS KS API plugin allows access to IDS Knowledge Services content of thematically organised and hand selected academic research on poverty reduction in the developing world that is freely available to access online.'); ?>
   </p>
-  
   <p>
   <?php _e('IDS Knowledge Services offer two collections that can be accessed via this plugin. They are:'); ?>
   </p>
-  
   <p>
   <?php _e('BRIDGE is a research and information service supporting gender advocacy and mainstreaming efforts by bridging the gaps between theory, policy and practice. BRIDGE acts as a catalyst by facilitating the generation and exchange of relevant, accessible and diverse gender information in print, online and through other innovative forms of communication. BRIDGE hosts a global resources library on its website, which includes gender-focused information materials in a number of languages, including Arabic, Chinese, English, French, Portuguese and Spanish.'); ?>
   </p>
-  
   <p>
   <?php _e('Eldis is an online information service covering development research on a wide change of thematic areas including agriculture, climate change, conflict, gender, governance, and health. Eldis includes over 32,000 summaries and links to free full-text research and policy documents from over 8,000 publishers.  Each document is editorially selected by members of our team.'); ?>
   </p>
-  
   <b><?php _e('What content can I get?'); ?></b>
-  
   <p>
   <b><?php _e('Documents'); ?></b> <?php _e('are a wide range of online resources, primarily academic research, on development issues that are freely available online.'); ?>
   <br>
   <?php _e('They are editorially selected, organised thematically and are summarised, in clear, non-technical language for easy consumption.'); ?>
   </p>
-  
   <p>
   <b><?php _e('Organisations'); ?></b> <?php _e('are a wide range of organisations engaged in reducing poverty. Most of the organisations in our datasets have published documents available in the data.'); ?>
   <br>
   <?php _e('Please note: currently there are no organisations in the BRIDGE dataset. Organisational websites are recorded as "documents".'); ?>
   </p>
-  
   <p>
   <b><?php _e('Countries'); ?></b> <?php _e('are used to identify either:'); ?>
   <ul class="ids-category-list">
@@ -262,70 +252,51 @@ function idsview_help_page() {
   <li class="cat-item"> <?php _e('the countries in which an organisation works'); ?>
   </ul>
   </p>
-  
   <p>
   <b><?php _e('Regions'); ?></b> <?php _e('are broad geographic groupings, which enable users to explore our documents and organisations by more than one country.'); ?>
   </p>
-
   <p>
   <b><?php _e('Themes'); ?></b> <?php _e('are development topics which reflect the key themes in development.'); ?>
   </p>
-  
   <b><?php _e('How do I use the plugin?'); ?></b>
-  
   <p>
   <?php _e('To use the plugin, you must obtain a unique Token-GUID or key for the API. Please register for your API key <a href="http://api.ids.ac.uk/accounts/register/" target="_new">here</a>. Once obtained, enter this key into the IDS API Token-GUID (key) section of the IDS Plugin Settings.'); ?>
   </p>
-  
   <p>
   <?php _e('The IDS API package actually has two plugins on offer, both allow the administrator to select content from'); ?> <a href="http://www.eldis.org/" target="_new">Eldis</a>, <a href="http://www.bridge.ids.ac.uk/" target="_new">BRIDGE</a> <?php _e('or both collections, and bring relevant content easily into the site.'); ?>
   </p>
-    
   <b><?php _e('IDS View plugin'); ?></b>
-
   <p>
   <?php _e('This plugin enables the display of a user defined subset of the IDS collection of documents or organisations using the IDS View widget, available in the Wordpress Widget panel.'); ?>
   </p>
-
   <p>
   <?php _e('So, if you were the administrator of a website that highlighted recent research on ICTs and Gender in Kenya, you would be able to select specific criteria to suit your content. You would select the themes ICT and Gender, as well as the country Kenya.'); ?>
   </p>
-
   <b><?php _e('Tips for searching'); ?></b>
-  
   <p>
   <?php _e('Although the Eldis and BRIDGE datasets are very wide ranging, very specific search terms may not return the number of results that you expect or want. Therefore, if you are not getting the results you expect, it might be worth trying more generic search terms or even simply searching at the Theme level.'); ?>
   </p>
-  
   <p>
   <?php _e('Please note: You can add multiple selections for the Theme and Country fields. The search then looks for results that contain either Theme or Country.'); ?>
   </p>
-  
   <p>
   <?php _e('e.g. A multiple selection of "India" and "Bangladesh" would show any results for:'); ?>
   </p>
-  
   <p>
   <?php _e('either "India" OR "Bangladesh"'); ?>
   </p>
-  
   <p>
   <?php _e('All other fields are combined in the search, so only results that contain ALL fields are returned.'); ?>
   </p>
-  
   <p>
   <?php _e('e.g. A selection of "World Bank" as the publisher, "2010" as the year of publication, and a multiple selection of "India" and "Bangladesh" would show any results for:'); ?>
   </p>
-  
   <p>
   <?php _e('World Bank AND 2010 AND (India OR Bangladesh)'); ?>
   </p>
-  
   <p>
   <?php _e('For terms and condition for using API see'); ?> <a href="http://api.ids.ac.uk/about/terms/" target="_new"><?php _e('here'); ?></a>.
   </p>
-
-
 <?php
 }
 
@@ -350,34 +321,24 @@ function idsview_add_javascript($hook) {
   if ($hook == 'settings_page_idsview') { // Only in the admin page.
     wp_print_scripts( 'jquery' );
     wp_print_scripts( 'jquery-ui-tabs' );
-
     wp_register_script('idsview_chosen_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'chosen/chosen.jquery.js', __FILE__));
     wp_enqueue_script('idsview_chosen_javascript');
-
     wp_register_script('idsview_jqwidgets_jqxcore_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'jqwidgets/jqwidgets/jqxcore.js', __FILE__));
     wp_enqueue_script('idsview_jqwidgets_jqxcore_javascript');
-
     wp_register_script('idsview_jqwidgets_jqxbuttons_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'jqwidgets/jqwidgets/jqxbuttons.js', __FILE__));
     wp_enqueue_script('idsview_jqwidgets_jqxbuttons_javascript');
-
     wp_register_script('idsview_jqwidgets_jqxdropdownbutton_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'jqwidgets/jqwidgets/jqxdropdownbutton.js', __FILE__));
     wp_enqueue_script('idsview_jqwidgets_jqxdropdownbutton_javascript');
-
     wp_register_script('idsview_jqwidgets_jqxscrollbar_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'jqwidgets/jqwidgets/jqxscrollbar.js', __FILE__));
     wp_enqueue_script('idsview_jqwidgets_jqxscrollbar_javascript');
-
     wp_register_script('idsview_jqwidgets_jqxpanel_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'jqwidgets/jqwidgets/jqxpanel.js', __FILE__));
     wp_enqueue_script('idsview_jqwidgets_jqxpanel_javascript');
-
     wp_register_script('idsview_jqwidgets_jqxtree_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'jqwidgets/jqwidgets/jqxtree.js', __FILE__));
     wp_enqueue_script('idsview_jqwidgets_jqxtree_javascript');
-
     wp_register_script('idsview_jqwidgets_jqxcheckbox_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'jqwidgets/jqwidgets/jqxcheckbox.js', __FILE__));
     wp_enqueue_script('idsview_jqwidgets_jqxcheckbox_javascript');
-
     wp_register_script('idsview_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'idsplugins.js', __FILE__));
     wp_enqueue_script('idsview_javascript');
-
     $api_key = idsapi_variable_get('idsview', 'api_key', '');
     $api_key_validated = idsapi_variable_get('idsview', 'api_key_validated', FALSE);
     $default_dataset = idsapi_variable_get('idsview', 'default_dataset', IDS_IMPORT_DEFAULT_DATASET_ADMIN);
@@ -405,12 +366,6 @@ function idsview_query_vars($query_vars) {
 
 function idsview_append_offset($link) {
   global $wp_query;
-/*
-  global $post;
-  $idsview_
-  echo 'POST ';
-  print_r($post);
-*/
   if (isset($wp_query->query_vars['ids_offset'])) { 
     $ids_offset = (get_query_var('ids_offset')) ? get_query_var('ids_offset') : 0;
     $current_page_num = (get_query_var('paged')) ? get_query_var('paged') : 1;
@@ -718,7 +673,36 @@ function idsview_get_assets($dataset, $assets_type, $num_items, $offset, $filter
   return $response;
 }
 
+// Display category title for archive-like listings.
+function idsview_category_title($dataset=IDS_API_DEFAULT_DATASET, $before='', $after='') {
+  $title = $dataset;
+  $cat_id = 0;
+  $api_key = idsapi_variable_get('idsview', 'api_key', FALSE);
+  if ($api_key) {
+    if ($cat_id = get_query_var('country')) {
+      $cat_name = 'countries';
+    }
+    elseif ($cat_id =  get_query_var('region')) {
+      $cat_name = 'regions';
+    }
+    elseif ($cat_id = get_query_var('theme')) {
+      $cat_name = 'themes';
+    }
+    if ($cat_id) {
+      $idsapi = new IdsApiWrapper;
+      $response = $idsapi->get($cat_name, $dataset, $api_key, 'short', $cat_id);
+      if ((!$response->isError()) && (!empty($response->results))) {
+        $title = $response->results[0]->title;
+      }
+    }
+  }
+  echo $before . $title . $after;
+}
 
+// A single object is being displayed.
+function idsview_is_single() {
+  return get_query_var('object_id');
+}
 
 
 
