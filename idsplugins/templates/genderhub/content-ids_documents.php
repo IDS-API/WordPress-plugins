@@ -44,6 +44,9 @@
 			<?php if ( is_single() ) : ?>
       <div class="ids-fields">
         <ul>
+          <!-- Document type is a custom field created with the ACF plugin and might have not been assigned when the document was imported -->
+          <li class="ids-field"><?php printf(__('Type: %s'), (get_field('document_type') ? get_field('document_type') : 'Article')); ?>
+          <!-- IDS documents fields -->
           <?php ids_authors('<li class="ids-field">' . __('Authors: ')); ?>
           <?php ids_date_updated('<li class="ids-field">' . __('Updated on: ')); ?>
           <?php ids_external_urls('<li class="ids-field">' . __('External URLs: ')); ?>
