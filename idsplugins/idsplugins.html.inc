@@ -4,70 +4,107 @@ define('IDS_PLUGINS_SCRIPTS_PATH', 'scripts/');
 
 //--------------------------------- Custom template tags --------------------------
 
-// IDS date_updated tag
+// ids_date_updated
 function ids_date_updated($before='', $after='') {
+  $date = ids_get_date_updated();
+  if ($date) {
+    echo $before . $date . $after;
+  }
+}
+
+// ids_get_date_updated
+function ids_get_date_updated() {
   global $post;
   $date = (isset($post->date_updated) ? $post->date_updated : get_post_meta($post->ID, 'date_updated', TRUE));
   if ($date) {
     if (is_numeric($date)) { // for backwards compatibility.
       $date = date_i18n(get_option('date_format'), $date);
     }
-    echo $before . $date . $after;
   }
+  return $date;
 }
 
-// IDS acronym tag
+// ids_acronym
 function ids_acronym($before='', $after='') {
-  global $post;
-  $acronym = (isset($post->acronym) ? $post->acronym : get_post_meta($post->ID, 'acronym', TRUE));
+  $acronym = ids_get_acronym();
   if ($acronym) {
     echo $before . $acronym . $after;
   }
 }
 
-// IDS location_country tag
-function ids_location_country($before='', $after='') {
+// ids_get_acronym
+function ids_get_acronym() {
   global $post;
-  $location_country = (isset($post->location_country) ? $post->location_country : get_post_meta($post->ID, 'location_country', TRUE));
+  $acronym = (isset($post->acronym) ? $post->acronym : get_post_meta($post->ID, 'acronym', TRUE));
+  return $acronym;
+}
+
+// ids_location_country
+function ids_location_country($before='', $after='') {
+  $location_country = ids_get_location_country();
   if ($location_country) {
     echo $before . $location_country . $after;
   }
 }
 
-// IDS location_country tag
-function ids_organisation_type($before='', $after='') {
+// ids_get_location_country
+function ids_get_location_country() {
   global $post;
-  $organisation_type = (isset($post->organisation_type) ? $post->organisation_type : get_post_meta($post->ID, 'organisation_type', TRUE));
+  $location_country = (isset($post->location_country) ? $post->location_country : get_post_meta($post->ID, 'location_country', TRUE));
+  return $location_country;
+}
+
+// ids_organisation_type
+function ids_organisation_type($before='', $after='') {
+  $organisation_type = ids_get_organisation_type();
   if ($organisation_type) {
     echo $before . $organisation_type . $after;
   }
 }
 
-// IDS organisation_url tag
-function ids_organisation_url($before='', $after='') {
+// ids_get_organisation_type
+function ids_get_organisation_type() {
   global $post;
-  $organisation_url = (isset($post->organisation_url) ? $post->organisation_url : get_post_meta($post->ID, 'organisation_url', TRUE));
+  $organisation_type = (isset($post->organisation_type) ? $post->organisation_type : get_post_meta($post->ID, 'organisation_type', TRUE));
+  return $organisation_type;
+}
+
+// ids_organisation_url
+function ids_organisation_url($before='', $after='') {
+  $organisation_url = ids_get_organisation_url();
   if ($organisation_url) {
     echo $before . ids_new_html_link($organisation_url, $organisation_url) . $after;
   }
 }
 
-// IDS authors tag
-function ids_authors($before='', $sep=', ', $after='') {
+// ids_get_organisation_url
+function ids_get_organisation_url() {
   global $post;
-  $authors = (isset($post->authors) ? $post->authors : get_post_meta($post->ID, 'authors', FALSE));
-  if (is_array($authors)) {
-    $authors = implode($sep, $authors);
-  }
+  $organisation_url = (isset($post->organisation_url) ? $post->organisation_url : get_post_meta($post->ID, 'organisation_url', TRUE));
+  return $organisation_url;
+}
+
+// ids_authors
+function ids_authors($before='', $sep=', ', $after='') {
+  $authors = ids_get_authors();
   if ($authors) {
     echo $before . $authors . $after;
   }
 }
 
-// IDS urls tag
-function ids_external_urls($before='', $sep=', ', $after='') {
+// ids_get_authors
+function ids_get_authors($sep=', ') {
   global $post;
-  $urls = (isset($post->urls) ? $post->urls : get_post_meta($post->ID, 'urls', FALSE));
+  $authors = (isset($post->authors) ? $post->authors : get_post_meta($post->ID, 'authors', FALSE));
+  if (is_array($authors)) {
+    $authors = implode($sep, $authors);
+  }
+  return $authors;
+}
+
+// ids_external_urls
+function ids_external_urls($before='', $sep=', ', $after='') {
+  $urls = ids_get_external_urls();
   if (is_array($urls)) {
     $urls = implode($sep, array_map('ids_new_html_link', $urls, $urls));
   }
@@ -79,30 +116,70 @@ function ids_external_urls($before='', $sep=', ', $after='') {
   }
 }
 
-// IDS countries tag
-function ids_countries($before='', $sep=', ', $after='', $base_url='') {
+// ids_get_external_urls
+function ids_get_external_urls() {
   global $post;
-  $countries = (isset($post->ids_countries) ? $before . implode($sep, ids_links_category($post->ids_countries, $base_url)) . $after : ids_get_list_categories($post->ID, 'countries', $before, $sep, $after));
-  if (($countries) && (!is_wp_error($countries))) {
+  $urls = (isset($post->urls) ? $post->urls : get_post_meta($post->ID, 'urls', FALSE));
+  return $urls;
+}
+
+// ids_countries
+function ids_countries($before='', $sep=', ', $after='', $base_url='') {
+  $countries = ids_get_countries($before, $sep, $after, $base_url);
+  if ($countries) {
     echo $countries;
   }
 }
 
-// IDS regions tag
-function ids_regions($before='', $sep=', ', $after='', $base_url='') {
+// ids_get_countries
+function ids_get_countries($before='', $sep=', ', $after='', $base_url='') {
   global $post;
-  $regions = (isset($post->ids_regions) ? $before . implode($sep, ids_links_category($post->ids_regions, $base_url)) . $after : ids_get_list_categories($post->ID, 'regions', $before, $sep, $after));
-  if (($regions) && (!is_wp_error($regions))) {
+  $countries = (isset($post->ids_countries) ? implode($sep, ids_links_category($post->ids_countries, $base_url)) . $after : ids_get_list_categories($post->ID, 'countries', $before, $sep, $after));
+  if (!is_wp_error($countries)) {
+    return $countries;
+  }
+  else {
+    return '';
+  }
+}
+
+// ids_regions
+function ids_regions($before='', $sep=', ', $after='', $base_url='') {
+  $regions = ids_get_regions($before, $sep, $after, $base_url);
+  if ($regions) {
     echo $regions;
   }
 }
 
-// IDS themes tag
+// ids_get_regions
+function ids_get_regions($before='', $sep=', ', $after='', $base_url='') {
+  global $post;
+  $regions = (isset($post->ids_regions) ? $before . implode($sep, ids_links_category($post->ids_regions, $base_url)) . $after : ids_get_list_categories($post->ID, 'regions', $before, $sep, $after));
+  if (!is_wp_error($regions)) {
+    return $regions;
+  }
+  else {
+    return '';
+  }
+}
+
+// ids_themes
 function ids_themes($before='', $sep=', ', $after='', $base_url='') {
+  $themes = ids_get_themes($before, $sep, $after, $base_url);
+  if ($themes) {
+    echo $themes;
+  }
+}
+
+// ids_get_themes
+function ids_get_themes($before='', $sep=', ', $after='', $base_url='') {
   global $post;
   $themes = (isset($post->ids_themes) ? $before . implode($sep, ids_links_category($post->ids_themes, $base_url)) . $after : ids_get_list_categories($post->ID, 'themes', $before, $sep, $after));
-  if (($themes) && (!is_wp_error($themes))) {
-    echo $themes;
+  if (!is_wp_error($themes)) {
+    return $themes;
+  }
+  else {
+    return '';
   }
 }
 
@@ -192,10 +269,11 @@ function ids_div_field_wrapper($class, $field_name, $label, $contents) {
 }
 
 // Given a category object, returns a link to it. Used in idsview_documents/idsview_organisations.
-function ids_links_category($categories, $baseurl) {
+function ids_links_category($categories, $baseurl='') {
+  global $post;
   $links = array();
   if (empty($baseurl)) {
-    $baseurl = get_page_link();
+    $baseurl = get_page_link($post->ID);
   }
   $par = ((preg_match('[\?]', $baseurl)) ? '&' : '?');
   foreach ($categories as $category) {
