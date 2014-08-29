@@ -51,8 +51,10 @@ add_action('wp_enqueue_scripts', 'idsimport_add_stylesheet');
 add_action('admin_enqueue_scripts', 'idsimport_add_admin_stylesheet');
 add_action('admin_enqueue_scripts', 'idsimport_add_javascript');
 add_filter('plugin_action_links', 'idsimport_plugin_action_links', 10, 2);
-add_filter('manage_posts_columns', 'idsimport_posts_columns');
-add_action('manage_posts_custom_column', 'idsimport_populate_posts_columns');
+add_filter('manage_edit-ids_documents_columns', 'idsimport_posts_columns');
+add_filter('manage_edit-ids_organisations_columns', 'idsimport_posts_columns');
+add_action('manage_ids_documents_posts_custom_column', 'idsimport_populate_posts_columns');
+add_action('manage_ids_organisations_posts_custom_column', 'idsimport_populate_posts_columns');
 add_filter('cron_schedules', 'idsimport_cron_intervals'); 
 add_action('idsimport_scheduled_events', 'idsimport_run_periodic_imports', 10, 1);
 add_filter('wp_get_object_terms', 'idsimport_filter_get_object_terms');
@@ -299,7 +301,6 @@ function idsimport_filter_posts($query) {
     $query->set('meta_key', 'site');
     $query->set('meta_value', $site);
   }
-	return $query;  
 }
 
 //---------------------- Admin interface (links, menus, etc -----------------------
@@ -314,42 +315,42 @@ function idsimport_add_menu() {
   global $ids_categories;
   global $ids_assets;
   $idsimport_menu_title = idsapi_variable_get('idsimport', 'menu_title', 'IDS Import');
-  $idsimport_new_categories = idsapi_variable_get('idsimport', 'import_new_categories', IDS_IMPORT_NEW_CATEGORIES);
-  $datasets = idsimport_display_datasets('admin');
-
-  add_menu_page('IDS API', $idsimport_menu_title, 'manage_options', 'idsimport_menu', 'idsimport_general_page', plugins_url('images/ids.png', __FILE__));
-  add_submenu_page( 'idsimport_menu', 'IDS Import', 'IDS Import', 'manage_options', 'idsimport_menu');
-  add_submenu_page( 'idsimport_menu', 'Settings', 'Settings', 'manage_options', 'options-general.php?page=idsimport');
-  add_submenu_page( 'idsimport_menu', 'Importer', 'Importer', 'manage_options', 'admin.php?import=idsimport_importer');
-
-  if (in_array('eldis', $datasets) && in_array('bridge', $datasets)) {
-    add_submenu_page( 'idsimport_menu', 'All IDS Documents', 'All IDS Documents', 'manage_options', 'edit.php?post_type=ids_documents');
-  }
-
-  if (in_array('eldis', $datasets) && in_array('bridge', $datasets)) {
-    add_submenu_page( 'idsimport_menu', 'All IDS Organisations', 'All IDS Organisations', 'manage_options', 'edit.php?post_type=ids_organisations');
-  }
-
-  foreach ($datasets as $dataset) {
-    foreach ($ids_assets as $asset) {
-      if (!idsapi_exclude($dataset, $asset)) {
-        $name = ucfirst($dataset) . ' ' . ucfirst($asset);
-        $function = 'edit.php?post_type=ids_' . $asset . '&ids_site=' . $dataset;
-        add_submenu_page( 'idsimport_menu', $name, $name, 'manage_options', $function);
-      }
+  if (idsapi_variable_get('idsimport', 'api_key_validated', FALSE)) {
+    $idsimport_new_categories = idsapi_variable_get('idsimport', 'import_new_categories', IDS_IMPORT_NEW_CATEGORIES);
+    $datasets = idsimport_display_datasets('admin');
+    add_menu_page('IDS API', $idsimport_menu_title, 'manage_options', 'idsimport_menu', 'idsimport_general_page', plugins_url('images/ids.png', __FILE__));
+    add_submenu_page( 'idsimport_menu', 'IDS Import', 'IDS Import', 'manage_options', 'idsimport_menu');
+    add_submenu_page( 'idsimport_menu', 'Settings', 'Settings', 'manage_options', 'options-general.php?page=idsimport');
+    add_submenu_page( 'idsimport_menu', 'Importer', 'Importer', 'manage_options', 'admin.php?import=idsimport_importer');
+    if (in_array('eldis', $datasets) && in_array('bridge', $datasets)) {
+      add_submenu_page( 'idsimport_menu', 'All IDS Documents', 'All IDS Documents', 'manage_options', 'edit.php?post_type=ids_documents');
     }
-    if ($idsimport_new_categories) {
-      foreach ($ids_categories as $category) {
-        if (!idsapi_exclude($dataset, $category)) {
-          $slug = $dataset . '_' . $category;
-          $name = ucfirst($dataset) . ' ' . ucfirst($category);
-          $function = 'idsimport_' . $dataset . '_' . $category . '_page';
-          add_submenu_page( 'idsimport_menu', $name, $name, 'manage_options', $slug, $function);
+    if (in_array('eldis', $datasets) && in_array('bridge', $datasets)) {
+      add_submenu_page( 'idsimport_menu', 'All IDS Organisations', 'All IDS Organisations', 'manage_options', 'edit.php?post_type=ids_organisations');
+    }
+    foreach ($datasets as $dataset) {
+      foreach ($ids_assets as $asset) {
+        if (!idsapi_exclude($dataset, $asset)) {
+          $name = ucfirst($dataset) . ' ' . ucfirst($asset);
+          $function = 'edit.php?post_type=ids_' . $asset . '&ids_site=' . $dataset;
+          add_submenu_page( 'idsimport_menu', $name, $name, 'manage_options', $function);
+        }
+      }
+      if ($idsimport_new_categories) {
+        foreach ($ids_categories as $category) {
+          if (!idsapi_exclude($dataset, $category)) {
+            $slug = $dataset . '_' . $category;
+            $name = ucfirst($dataset) . ' ' . ucfirst($category);
+            $function = 'idsimport_' . $dataset . '_' . $category . '_page';
+            add_submenu_page( 'idsimport_menu', $name, $name, 'manage_options', $slug, $function);
+          }
         }
       }
     }
   }
-
+  else {
+    add_menu_page('IDS API', $idsimport_menu_title, 'manage_options', 'idsimport_menu', 'idsimport_admin_main', plugins_url('images/ids.png', __FILE__));
+  }
   add_submenu_page( 'idsimport_menu', 'Help', 'Help', 'manage_options', 'idsimport_help', 'idsimport_help_page');
 }
 

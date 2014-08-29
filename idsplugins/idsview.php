@@ -175,9 +175,14 @@ function idsview_register_widget() {
 // Add menu
 function idsview_add_menu() {
   $idsview_menu_title = idsapi_variable_get('idsview', 'menu_title', IDS_VIEW_MENU_TITLE);
-  add_menu_page('IDS View', $idsview_menu_title, 'manage_options', 'idsview_menu', 'idsview_general_page', plugins_url('images/ids.png', __FILE__));
-  add_submenu_page( 'idsview_menu', 'IDS View', 'IDS View', 'manage_options', 'idsview_menu');
-  add_submenu_page( 'idsview_menu', 'Settings', 'Settings', 'manage_options', 'options-general.php?page=idsview');
+  if (idsapi_variable_get('idsview', 'api_key_validated', FALSE)) {
+    add_menu_page('IDS View', $idsview_menu_title, 'manage_options', 'idsview_menu', 'idsview_general_page', plugins_url('images/ids.png', __FILE__));
+    add_submenu_page( 'idsview_menu', 'IDS View', 'IDS View', 'manage_options', 'idsview_menu');
+    add_submenu_page( 'idsview_menu', 'Settings', 'Settings', 'manage_options', 'options-general.php?page=idsview');
+  }
+  else {
+    add_menu_page('IDS View', $idsview_menu_title, 'manage_options', 'idsview_menu', 'idsview_admin_main', plugins_url('images/ids.png', __FILE__));
+  }
   add_submenu_page( 'idsview_menu', 'Help', 'Help', 'manage_options', 'idsview_help', 'idsview_help_page');
 }
 
