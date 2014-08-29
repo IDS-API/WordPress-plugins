@@ -35,6 +35,8 @@ get_header(); ?>
 					elseif ( is_category() || is_tax() ) :
             printf( __('Results for: '));
             single_cat_title( '', true );
+					elseif ( is_post_type_archive( 'ids_documents' ) ) :
+						_e( 'Resource library', 'twentythirteen' );
 					else :
 						_e( 'Archives', 'twentythirteen' );
 					endif;
