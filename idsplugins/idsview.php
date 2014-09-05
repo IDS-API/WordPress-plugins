@@ -58,6 +58,7 @@ add_filter('the_content', 'idsview_asset_content');
 
 // Create new pages to display IDS assets
 function idsview_activate() {
+  global $wp_rewrite;
   global $ids_assets;
   global $ids_datasets;
   foreach ($ids_datasets as $dataset) {
@@ -100,8 +101,11 @@ function idsview_activate() {
 
 // Initialize plugin. Create custom post types (ids_documents/ids_organisations) if they do not exist.
 function idsview_init() {
+  global $wp_rewrite;
   ids_post_types_init();
-  ids_check_permalinks_changed('idsview');
+  if (ids_check_permalinks_changed('idsview')) {
+    $wp_rewrite->flush_rules();
+  }
 }
 
 // Clean up on deactivation.

@@ -68,8 +68,6 @@ function ids_new_post_type($post_type_name, $post_type_label, $singular_name) {
 //----------------------------------- Retrieve custom types / taxonomies ---------------------------
 
 
-// TODO: This is a temporary solution.
-// Change this once the custom fields are defined independently for each custom type/taxonomy (see idsimport.importer.inc and idsimport.metadata.inc).
 // This is only for IDS taxonomies, as there is no standard way of implementing custom fields in Wordpress taxonomies.
 function ids_get_taxonomy_custom_fields($dataset_type) {
   list($site, $type) = explode('_', $dataset_type);

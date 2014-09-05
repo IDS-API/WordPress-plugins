@@ -2,14 +2,16 @@
 
 define('IDS_DEFAULT_LANGUAGE', 'en');
 
-// Check if the permalinks configuration was changed and we need to flush the rules.
+// Check if the permalinks configuration has changed and we need to recreate the rules.
 function ids_check_permalinks_changed($plugin) {
-  global $wp_rewrite;
   $permalinks = idsapi_variable_get($plugin, 'permalink_structure', '');
   $current_permalinks = get_option('permalink_structure');
   if ($permalinks !== $current_permalinks) {
     idsapi_variable_set($plugin, 'permalink_structure', $current_permalinks);
-    $wp_rewrite->flush_rules();
+    return TRUE;
+  }
+  else {
+    return FALSE;
   }
 }
 

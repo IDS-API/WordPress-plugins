@@ -99,7 +99,7 @@ class IDS_Importer extends WP_Importer {
           }
         }
         if (!$total && !$exclude) {
-          $output = __('Nothing was imported.');
+          $output = __('Nothing imported from ') . ucfirst($dataset);
           echo ids_div_field_wrapper('ids-results-import', '', '', $output);
         }
       }
@@ -163,10 +163,10 @@ class IDS_Importer extends WP_Importer {
                 if ($updated_assets !== 'skip') {
                   $post_id = $post_ids[0]; //TODO: check if both are pending or published.
                   $old_date_updated = get_post_meta($post_id, 'date_updated', TRUE);
-                  if (!is_numeric($old_date_updated)) { // for backwards compatibility
+                  if (!is_numeric($old_date_updated)) {
                     $old_date_updated = strtotime($old_date_updated);
                   }
-                  if ($asset->date_updated > $old_date_updated) { // the new version is more recent
+                  if (strtotime($asset->date_updated) > $old_date_updated) { // the new version is more recent
                     switch ($updated_assets) {
                       case 'overwrite':                 
                         $post_id = idsimport_update_asset($post_id, $dataset, $post_type, $asset);
@@ -481,10 +481,10 @@ function idsimport_insert_asset($dataset, $post_type, $asset, $duplicated = FALS
     $post['post_author'] = $idsimport_import_user_id;
   }
   if (isset($asset->date_created) && ($idsimport_pub_date == 'date_created')) { 
-    $post['post_date'] = date_i18n('Y-m-d H:i:s', $asset->date_created);
+    $post['post_date'] = date_i18n('Y-m-d H:i:s', strtotime($asset->date_created));
   }
   if (isset($asset->date_updated) && ($idsimport_pub_date == 'date_updated')) { 
-    $post['post_date'] = date_i18n('Y-m-d H:i:s', $asset->date_updated);
+    $post['post_date'] = date_i18n('Y-m-d H:i:s', strtotime($asset->date_updated));
   }
   $post_id  = wp_insert_post($post);
   if (is_admin() && IDS_IMPORT_VERBOSE_IMPORT) {
@@ -574,10 +574,10 @@ function idsimport_update_asset($post_id, $dataset, $post_type, $asset) {
     $updated_post['post_author'] = $idsimport_import_user_id;
   }
   if (isset($asset->date_created) && ($idsimport_pub_date == 'date_created')) { 
-    $updated_post['post_date'] = date_i18n('Y-m-d H:i:s', $asset->date_created);
+    $updated_post['post_date'] = date_i18n('Y-m-d H:i:s', strtotime($asset->date_created));
   }
   if (isset($asset->date_updated) && ($idsimport_pub_date == 'date_updated')) { 
-    $updated_post['post_date'] = date_i18n('Y-m-d H:i:s', $asset->date_updated);
+    $updated_post['post_date'] = date_i18n('Y-m-d H:i:s', strtotime($asset->date_updated));
   }
   $new_post_id  = wp_update_post($updated_post);
   if (is_admin() && IDS_IMPORT_VERBOSE_IMPORT) {

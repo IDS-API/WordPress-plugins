@@ -18,7 +18,6 @@ function idsimport_general_page() {
     <li class="cat-item"> <p><a href="<?php echo get_admin_url() . 'options-general.php?page=idsimport'; ?>"><?php _e('Settings'); ?></a></p>
     <li class="cat-item"> <p><a href="<?php echo get_admin_url() . 'admin.php?page=idsimport_help'; ?>"><?php _e('Help'); ?></a></p>
   </ul>
-
   <table>
     <tr valign="top">
     <td class="idsimport-admin-col1">
@@ -43,9 +42,13 @@ function idsimport_general_page() {
       foreach ($ids_assets as $asset) {
         if (!idsapi_exclude($dataset, $asset)) {
           $name = ucfirst($dataset) . ' ' . ucfirst($asset); 
-          $link = get_post_type_archive_link('ids_' . $asset);
-          $par = ((preg_match('[\?]', $link)) ? '&' : '?'); ?>
-          <li class="cat-item"> <p><a href="<?php echo $link . $par . 'ids_site=' . $dataset; ?>"><?php _e('View'); ?> <?php echo $name; ?></a></p>
+          $link = 'ids_' . $asset;
+          if (idsapi_variable_get('idsimport', 'default_dataset', IDS_IMPORT_DEFAULT_DATASET_ADMIN) == 'all') { // TODO: Generalize.
+            $par = ((preg_match('[\?]', $link)) ? '&' : '?');
+            $link .= $par . 'ids_site=' . $dataset;
+          }
+          ?>
+          <li class="cat-item"> <p><a href="<?php echo site_url($link); ?>"><?php _e('View'); ?> <?php echo $name; ?></a></p>
       <?php }
       }
     } ?>
@@ -359,18 +362,54 @@ function idsimport_render_form() {
             </p>
 					</td>
 				</tr>
-
-        <!-- IDS API URL --
+      <?php if ($idsimport_api_key_validated) { ?>
+        <?php
+          if (get_option('permalink_structure')) {
+            $path_disabled = '';
+            $default_path_documents = 'ids_assets/documents';
+            $default_path_organisations = 'ids_assets/organisations';
+          }
+          else {
+            $path_disabled = ' disabled';
+            $default_path_documents = '';
+            $default_path_organisations = '';
+          }
+        ?>
         <tr>
-          <th scope="row"><?php _e('IDS API URL'); ?></th>
+          <th scope="row"><?php _e('IDS Documents path'); ?></th>
           <td>
-            <input type="text" size="57" name="idsimport_options[api_url]" value="<?php echo idsapi_variable_get('idsimport', 'api_url', IDS_API_URL); ?>" /><br />
-            <p class="description"><?php _e('In general, you would not need to change this.'); ?></p>
+            <code><?php echo home_url(); ?>/</code>
+            <input type="text" size="30" name="idsimport_options[ids_documents_path]" value="<?php echo idsapi_variable_get('idsimport', 'ids_documents_path', $default_path_documents); ?>" <?php echo $path_disabled; ?>/>
+            <input type="hidden" size="30" name="idsimport_options[ids_documents_old_path]" value="<?php echo idsapi_variable_get('idsimport', 'ids_documents_old_path', ''); ?>" />
           </td>
         </tr>
-        -->
-
-      <?php if ($idsimport_api_key_validated) { ?>
+        <tr>
+          <th scope="row"><?php _e('IDS Organisations path'); ?></th>
+          <td>
+            <code><?php echo home_url(); ?>/</code>
+            <input type="text" size="30" name="idsimport_options[ids_organisations_path]" value="<?php echo idsapi_variable_get('idsimport', 'ids_organisations_path', $default_path_organisations); ?>" <?php echo $path_disabled; ?>/>
+            <input type="hidden" size="30" name="idsimport_options[ids_organisations_old_path]" value="<?php echo idsapi_variable_get('idsimport', 'ids_organisations_old_path', ''); ?>" />
+						<p class="description">
+              <?php _e('These paths, relative to the site URL, can be used to retrieve and display imported elements.'); ?>
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <th scope="row"></th>
+          <td>
+            <p class="description">
+            <small>
+              <?php if ($path_disabled) { ?> 
+                <?php printf(__('Paths rewriting is available only when custom <a href="%s">permalink structures</a> are active.'), 'options-permalink.php'); ?>
+              <?php } else { ?>
+                - <?php _e('If more than one source is selected in "Import settings", the source\'s slug (for instance: "eldis" or "bridge") can appended to the paths in order to filter elements by their origin.'); ?>
+                <?php printf(__('For instance, if the path is %s, the following URLs would be available: %s, which would display all IDS documents, and %s, which would only display Eldis\' documents.'), '<code>ids_assets/documents</code>', '<code>'.home_url().'/ids_assets/documents</code>', '<code>'.home_url().'/ids_assets/documents/eldis</code>'); ?><br>
+                - <?php printf(__('If the paths are left empty, the default URLs: %s and %s can be used to retrieve IDS assets.'), '<code>'.home_url().'/ids_documents/</code>', '<code>'.home_url().'/ids_organisations/</code>'); ?><br>
+              <?php } ?>
+            </small>
+            </p>
+          </td>
+        </tr>
       </table>
 
       <!---------------------------- GENERAL IMPORT SETTINGS ------------------------------>
@@ -456,7 +495,7 @@ function idsimport_render_form() {
         <tr>
           <th scope="row"><?php _e('Publication date'); ?></th>
           <td>
-            <?php echo ids_select_box('idsimport_options[pub_date]', 'idsimport_pub_date', array('default' => __('Import date'), 'date_created' => __('Date created (IDS API)'), 'date_updated' => __('Date updated (IDS API)')), array(idsapi_variable_get('idsimport', 'pub_date', 'default'))); ?>
+            <?php echo ids_select_box('idsimport_options[pub_date]', 'idsimport_pub_date', array('default' => __('Import date'), 'date_created' => __('Date created (IDS API)'), 'date_updated' => __('Date updated (IDS API)')), array(idsapi_variable_get('idsimport', 'pub_date', 'date_created'))); ?>
             <p class="description">
             <?php _e('Date of publication of imported documents and/or organisations.'); ?>
             <br />
@@ -878,67 +917,80 @@ function idsimport_posts_columns($defaults) {
   $idsimport_new_categories = idsapi_variable_get('idsimport', 'import_new_categories', IDS_IMPORT_NEW_CATEGORIES);
   $site = '';
   $datasets = $ids_datasets;
-  if (isset($_GET['post_type'])) {
-    $post_type = $_GET['post_type'];
-    if (($post_type == 'ids_documents') || ($post_type == 'ids_organisations')) {
-      if(isset($_GET['ids_site'])) {
-        $site = $_GET['ids_site'];
-      }
-      elseif (isset($_GET['eldis_countries']) || isset($_GET['eldis_regions']) || isset($_GET['eldis_themes'])) {
-        $site = 'eldis';
-      }
-      elseif (isset($_GET['bridge_countries']) || isset($_GET['bridge_regions']) || isset($_GET['bridge_themes'])) {
-        $site = 'bridge';
-      }
-      if (($site == 'eldis') || ($site == 'bridge')) {
-        $datasets = array($site);
-      }
-      foreach ($datasets as $dataset) {
-        foreach ($ids_categories as $category) {
-          $taxonomy_name = $dataset . '_' . $category;
-          if (taxonomy_exists($taxonomy_name) && $idsimport_new_categories) {
-            $category_name = ucfirst($dataset) . ' ' . ucfirst($category);
-            $defaults[$taxonomy_name] = $category_name;
-          }
-        }
+  $post_type = get_query_var('post_type');
+  if (!$post_type) {
+    $post_type = 'post';
+  }
+  $site = get_query_var('ids_site');
+  if (!$site && (isset($_GET['eldis_countries']) || isset($_GET['eldis_regions']) || isset($_GET['eldis_themes']))) {
+    $site = 'eldis';
+  }
+  elseif (!$site && (isset($_GET['bridge_countries']) || isset($_GET['bridge_regions']) || isset($_GET['bridge_themes']))) {
+    $site = 'bridge';
+  }
+  if (($site == 'eldis') || ($site == 'bridge')) {
+    $datasets = array($site);
+  }
+  $supported_taxonomies = get_object_taxonomies($post_type);
+  foreach ($datasets as $dataset) {
+    foreach ($ids_categories as $category) {
+      $taxonomy_name = $dataset . '_' . $category;
+      if (taxonomy_exists($taxonomy_name) && $idsimport_new_categories && in_array($taxonomy_name, $supported_taxonomies)) {
+        $category_name = ucfirst($dataset) . ' ' . ucfirst($category);
+        $defaults[$taxonomy_name] = $category_name;
       }
     }
   }
   return $defaults;
 }
 
-// Removes the IDS category widgets if they are not enabled in settings.
-function idsimport_edit_post_form() {
-  global $ids_datasets;
-  global $ids_categories;
-  $idsimport_new_categories = idsapi_variable_get('idsimport', 'import_new_categories', IDS_IMPORT_NEW_CATEGORIES);
-  if (!$idsimport_new_categories) {
-    $types = array('post', 'ids_documents', 'ids_organisations');
-    foreach ($ids_datasets as $dataset) {
-      foreach ($ids_categories as $category) {
-        foreach ($types as $type) {
-          $custom_taxonomy_slug = $dataset . '_' . $category;
-          remove_meta_box($custom_taxonomy_slug.'div', $type, 'side');
-        }
-      }
-    }
-  }
-}
-
-// Add columns contents in the posts edit page
+// Add columns contents in the posts edit page.
+// TODO: Generalize.
 function idsimport_populate_posts_columns($column){
   global $post;
   $is_ids_category = preg_match('/[eldis][bridge]/', $column);
   if ($is_ids_category) {
     $str = explode('_', $column);
-	  $terms = get_the_term_list($post->ID, $column,'',', ','');
+	  //$terms = get_the_term_list($post->ID, $column, '', ', ', '');
+    $terms = get_the_terms($post->ID, $column);
     if ($terms) {
-      $output = $terms;
+      $terms_output = array();
+      foreach ($terms as $term) {
+        $term_link = '/?'.$column.'='.$term->slug;
+        $post_type = get_query_var('post_type');
+        if ($post_type) {
+          $term_link .= '&post_type=' . $post_type;
+        }
+        $terms_output[] = '<a href="'.site_url($term_link).'">'.$term->name.'</a>';
+      }
+      $output = implode(', ', $terms_output);
     }
     else {
       $output = 'No ' . ucfirst($str[1]);
     }
     echo $output;
+  }
+}
+
+// Removes the IDS category widgets if the categories are not enabled in settings.
+function idsimport_edit_post_form() {
+  global $ids_datasets;
+  global $ids_categories;
+  $idsimport_new_categories = idsapi_variable_get('idsimport', 'import_new_categories', IDS_IMPORT_NEW_CATEGORIES);
+  if (!$idsimport_new_categories) {
+    $types = get_post_types(array('_builtin' => false));
+    $types[] = 'post';
+    foreach ($ids_datasets as $dataset) {
+      foreach ($ids_categories as $category) {
+        foreach ($types as $type) {
+          $supported_taxonomies = get_object_taxonomies($type);
+          $custom_taxonomy_slug = $dataset . '_' . $category;
+          if (in_array($custom_taxonomy_slug, $supported_taxonomies)) {
+            remove_meta_box($custom_taxonomy_slug.'div', $type, 'side');
+          }
+        }
+      }
+    }
   }
 }
 

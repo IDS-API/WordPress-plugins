@@ -51,10 +51,12 @@ add_action('wp_enqueue_scripts', 'idsimport_add_stylesheet');
 add_action('admin_enqueue_scripts', 'idsimport_add_admin_stylesheet');
 add_action('admin_enqueue_scripts', 'idsimport_add_javascript');
 add_filter('plugin_action_links', 'idsimport_plugin_action_links', 10, 2);
-add_filter('manage_edit-ids_documents_columns', 'idsimport_posts_columns');
-add_filter('manage_edit-ids_organisations_columns', 'idsimport_posts_columns');
+add_filter('manage_ids_documents_posts_columns', 'idsimport_posts_columns');
+add_filter('manage_ids_organisations_posts_columns', 'idsimport_posts_columns');
 add_action('manage_ids_documents_posts_custom_column', 'idsimport_populate_posts_columns');
 add_action('manage_ids_organisations_posts_custom_column', 'idsimport_populate_posts_columns');
+add_filter('manage_post_posts_columns', 'idsimport_posts_columns');
+add_action('manage_post_posts_custom_column', 'idsimport_populate_posts_columns');
 add_filter('cron_schedules', 'idsimport_cron_intervals'); 
 add_action('idsimport_scheduled_events', 'idsimport_run_periodic_imports', 10, 1);
 add_filter('wp_get_object_terms', 'idsimport_filter_get_object_terms');
@@ -65,15 +67,19 @@ add_filter('request', 'idsimport_filter_imported_tags');
 add_filter('query_vars', 'idsimport_query_vars');
 add_action('pre_get_posts', 'idsimport_include_idsassets_loop');
 add_filter('pre_get_posts', 'idsimport_filter_posts');
-
+add_filter('post_type_link', 'idsimport_post_link');
 //Uncomment to filter category names when editing the categories, too.
 //add_filter('get_term', 'idsimport_filter_get_term');
-
 add_action('delete_term', 'idsimport_delete_term', 10, 3);
+add_action('generate_rewrite_rules', 'idsimport_create_rewrite_rules');
+add_filter('get_previous_post_where', 'idsimport_adjacent_post_where');
+add_filter('get_previous_post_join', 'idsimport_adjacent_post_join');
+add_filter('get_next_post_where', 'idsimport_adjacent_post_where');
+add_filter('get_next_post_join', 'idsimport_adjacent_post_join');
 
 //--------------------------- Set-up / init functions ----------------------------
 
-// Just in case, we make sure to delete the cache on activation.
+// IDS Import plugin activation.
 function idsimport_activate() {
   $idsapi = new IdsApiWrapper;
   $idsapi->cacheFlush();  
@@ -81,6 +87,7 @@ function idsimport_activate() {
 
 // Register custom types, taxonomies and importer.
 function idsimport_init() {
+  global $wp_rewrite;
   // Register post types
   ids_post_types_init();
   // Register taxonomies.
@@ -90,7 +97,11 @@ function idsimport_init() {
     $ids_importer = new IDS_Importer();
     register_importer('idsimport_importer', __('IDS Importer', 'idsimport-importer'), __('Import posts from the IDS collection (Eldis and Bridge).', 'idsimport-importer'), array ($ids_importer, 'dispatch'));
   }
-  idsimport_check_permalinks_changed();
+  $changed_path_documents = idsimport_changed_path('ids_documents');
+  $changed_path_organisations = idsimport_changed_path('ids_organisations');
+  if ($changed_path_documents || $changed_path_organisations || ids_check_permalinks_changed('idsimport')) {
+    $wp_rewrite->flush_rules();
+  }
 }
 
 // Clean up on deactivation
@@ -129,8 +140,9 @@ function idsimport_admin_init(){
 
 // Create new custom taxonomies for the IDS categories.
 function idsimport_taxonomies_init() {
-  $ids_taxonomies = array('countries' => 'Country', 'regions' => 'Region', 'themes' => 'Theme');
   global $ids_datasets;
+  global $wp_rewrite;
+  $ids_taxonomies = array('countries' => 'Country', 'regions' => 'Region', 'themes' => 'Theme');
   idsimport_create_taxonomy_metadata();
   $default_dataset = idsapi_variable_get('idsimport', 'default_dataset', IDS_API_DEFAULT_DATASET);
   if ($default_dataset == 'all') {
@@ -145,6 +157,7 @@ function idsimport_taxonomies_init() {
       $taxonomy_label = ucfirst($dataset) . ' ' . ucfirst($taxonomy);
       $singular_name = ucfirst($dataset) . ' ' . $singular_name;
       idsimport_new_taxonomy($taxonomy_name, $taxonomy_label, $singular_name, TRUE);
+      idsimport_register_objects($taxonomy_name);
       // Add additional fields in the imported categories' 'edit' page.
       $form_fields_hook = $taxonomy_name . '_' . 'edit_form_fields';
       $new_metabox = 'idsimport_' . $taxonomy . '_metabox_edit';
@@ -159,6 +172,107 @@ function idsimport_taxonomies_init() {
     $regions_taxonomy = $dataset . '_regions';
     if ((taxonomy_exists($countries_taxonomy)) && (taxonomy_exists($regions_taxonomy))) {
       register_taxonomy_for_object_type($regions_taxonomy, $countries_taxonomy);
+    }
+  }
+}
+
+function idsimport_post_link($url) {
+  global $post;
+  $post_type = get_post_type($post);
+  if (idsapi_variable_get('idsimport', 'default_dataset', IDS_IMPORT_DEFAULT_DATASET_ADMIN) == 'all') { // TODO: Generalize.
+    $site = get_query_var('ids_site');
+  }
+  else {
+    $site = '';
+  }
+  if (($post_type == 'ids_documents') || ($post_type == 'ids_organisations')) {
+    if (get_option('permalink_structure')) {
+      $new_path = idsapi_variable_get('idsimport', $post_type . '_path', '');
+      if ($site) {
+        if (!$new_path) {
+          $new_path = $post_type;
+        }
+        $new_path .= "/$site";
+      }
+      if ($new_path) {
+        $url = preg_replace('/'.$post_type.'/', $new_path, $url);
+      }
+    }
+    elseif ($site) {
+      $url = add_query_arg('ids_site', $site, $url);
+    }
+  }
+  return $url;
+}
+
+function idsimport_adjacent_post_join($join) {
+  global $wpdb;
+  $site = get_query_var('ids_site');
+  if ($site) {
+    $join .= ", $wpdb->postmeta AS m";
+  }
+  return $join;
+}
+
+function idsimport_adjacent_post_where($where) {
+  $site = get_query_var('ids_site');
+  if ($site) {
+    $where .= " AND p.ID = m.post_id AND m.meta_key='site' AND m.meta_value='$site'";
+  }
+  return $where;
+}
+
+function idsimport_pre_post_link($link) {
+  $site = get_query_var('ids_site');
+  if ($site) {   
+    $link .= "&ids_site=$site";
+  }
+  return $link;
+}
+
+function idsimport_changed_path($post_type) {
+  return (idsapi_variable_get('idsimport', $post_type . '_path', '') !== idsapi_variable_get('idsimport', $post_type . '_old_path', ''));
+}
+
+function idsimport_create_rewrite_rules() {
+   idsimport_rewrite_path('ids_documents');
+   idsimport_rewrite_path('ids_organisations');
+}
+
+function idsimport_rewrite_path($post_type){
+  global $wp_rewrite;
+  global $ids_datasets;
+  $new_path = idsapi_variable_get('idsimport', $post_type . '_path', '');
+  if (!$new_path) {
+    $new_path = $post_type;
+  }
+  if ($permalink_structure = get_option('permalink_structure')) {
+    $datasets = (idsapi_variable_get('idsimport', 'default_dataset', IDS_IMPORT_DEFAULT_DATASET_ADMIN) == 'all') ? implode('|', $ids_datasets) : '';
+    if ($datasets) {
+      add_rewrite_rule("{$new_path}/({$datasets})/?$", "index.php?post_type=$post_type" . '&ids_site=$matches[1]', 'top');
+      add_rewrite_rule("{$new_path}/({$datasets})/{$wp_rewrite->pagination_base}/([0-9]{1,})/?$", "index.php?post_type=$post_type" . '&ids_site=$matches[1]&paged=$matches[2]', 'top');
+    }
+    if ($new_path !== $post_type) {
+      add_rewrite_rule("{$new_path}/?$", "index.php?post_type=$post_type", 'top');
+      add_rewrite_rule("{$new_path}/{$wp_rewrite->pagination_base}/([0-9]{1,})/?$", "index.php?post_type=$post_type" . '&paged=$matches[1]', 'top');
+    }
+    if ($wp_rewrite->feeds) {
+      $feeds = '(' . trim(implode( '|', $wp_rewrite->feeds)) . ')';
+      if ($datasets) {
+        add_rewrite_rule("{$new_path}/({$datasets})/feed/$feeds/?$", "index.php?post_type=$post_type" . '&ids_site=$matches[1]&feed=$matches[2]', 'top');
+        add_rewrite_rule("{$new_path}/({$datasets})/$feeds/?$", "index.php?post_type=$post_type" . '&ids_site=$matches[1]&feed=$matches[2]', 'top');
+      }
+      if ($new_path !== $post_type) {
+        add_rewrite_rule("{$new_path}/feed/$feeds/?$", "index.php?post_type=$post_type" . '&feed=$matches[1]', 'top');
+        add_rewrite_rule("{$new_path}/$feeds/?$", "index.php?post_type=$post_type" . '&feed=$matches[1]', 'top');
+      }
+    }
+    // These have to be the last ones.
+    if ($datasets) {
+      add_rewrite_rule("{$new_path}/({$datasets})/([a-z0-9\-]+)/?$", "index.php?$post_type=" . '$matches[2]&ids_site=$matches[1]', 'top');
+    }
+    if ($new_path !== $post_type) {
+      add_rewrite_rule("{$new_path}/([a-z0-9\-]+)/?$", "index.php?$post_type=" . '$matches[1]', 'top');
     }
   }
 }
@@ -184,7 +298,6 @@ function idsimport_delete_taxonomy_terms($taxonomy) {
 
 // Create a new taxonomy.
 function idsimport_new_taxonomy($taxonomy_name, $taxonomy_label, $singular_name, $is_hierarchical) {
-  global $wp_rewrite;
   if (!taxonomy_exists($taxonomy_name)) {
     $labels = array(
       'name' => _x( $taxonomy_label, 'taxonomy general name' ),
@@ -213,11 +326,20 @@ function idsimport_new_taxonomy($taxonomy_name, $taxonomy_label, $singular_name,
       $args
     );
   }
+}
+
+function idsimport_register_objects($taxonomy_name) {
   $idsimport_new_categories = idsapi_variable_get('idsimport', 'import_new_categories', IDS_IMPORT_NEW_CATEGORIES);
   if (($idsimport_new_categories) && taxonomy_exists($taxonomy_name)) {
     register_taxonomy_for_object_type($taxonomy_name, 'post');
+    $post_types = get_post_types(array('_builtin' => false), 'objects');
+    foreach ($post_types as $type) {
+      $registered_taxonomies = get_object_taxonomies($type->name);
+      if (in_array($taxonomy_name, $type->taxonomies) && !in_array($taxonomy_name, $registered_taxonomies)) {
+        register_taxonomy_for_object_type($taxonomy_name, $type->name);
+      }
+    }
   }
-  $wp_rewrite->flush_rules();
 }
 
 // Mark posts as pending.

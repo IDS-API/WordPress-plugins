@@ -151,10 +151,10 @@ abstract class IdsApiObjectAsset extends IdsApiObject {
       $this->asset_id = $object['asset_id'];
     }
     if (isset($object['date_created'])) {
-      $this->date_created = strtotime($object['date_created']);
+      $this->date_created = $object['date_created'];
     }
     if (isset($object['date_updated'])) {
-      $this->date_updated = strtotime($object['date_updated']);
+      $this->date_updated = $object['date_updated'];
     }
     if (isset($object['category_theme_array'])) {
       $this->category_theme_array = build_array_categories($object['category_theme_array']);
@@ -270,7 +270,7 @@ class IdsApiObjectAssetDocument extends IdsApiObjectAsset {
       $this->language_array = build_array_languages($object['language_array']);
     }
     if (isset($object['publication_date'])) {
-      $this->publication_date = strtotime($object['publication_date']);
+      $this->publication_date = $object['publication_date'];
     }
     if (isset($object['publisher'])) {
       $this->publisher = $object['publisher'];

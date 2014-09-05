@@ -11,7 +11,6 @@ get_header(); ?>
 
 	<div id="primary" class="site-content">
 		<div id="content" role="main">
-
 			<?php while ( have_posts() ) : the_post(); ?>
 
       <!-- We include 'content-ids_documents' here, instead of 'content'. -->

@@ -98,20 +98,11 @@ function idsimport_display_datasets($area) {
   return $datasets;
 }
 
-function idsimport_check_permalinks_changed() {
-  global $wp_rewrite;
-  $idsimport_permalinks = idsapi_variable_get('idsimport', 'permalink_structure', '');
-  $current_permalinks = get_option('permalink_structure');
-  if ($idsimport_permalinks !== $current_permalinks) {
-    idsapi_variable_set('idsimport', 'permalink_structure', $current_permalinks);
-    $wp_rewrite->flush_rules();
-  }
-}
-
 //------------------------------ Options validation -----------------------------
 
 // Validate input and the API key.
 function idsimport_validate_options($input) {
+  global $ids_datasets;
   $idsapi = new IdsApiWrapper;
   $error = FALSE;
   $error_message = '';
@@ -119,6 +110,7 @@ function idsimport_validate_options($input) {
   $idsimport_default_dataset = idsapi_variable_get('idsimport', 'default_dataset', IDS_IMPORT_DEFAULT_DATASET_ADMIN);
   $reg_api_key = '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/';
   $reg_api_url = '/^http:\/\/[\/0-9a-z\.]+$/';
+  $reg_path = '/^\/?([\w\-]+\/?)*\/?$/';
   $allowed_html = array();
 
   $current_permalinks = get_option('permalink_structure');
@@ -178,6 +170,34 @@ function idsimport_validate_options($input) {
     if (isset($input['import_user'])) {
       $input['import_user'] =  sanitize_user($input['import_user'], TRUE);
     }
+    $warning_paths = '';
+    foreach (array('documents', 'organisations') as $asset_type) {
+      if (isset($input['ids_'.$asset_type.'_path']) && !$error) {
+        if (!isset($input['ids_'.$asset_type.'_old_path']) || ($input['ids_'.$asset_type.'_path'] !== $input['ids_'.$asset_type.'_old_path'])) { 
+          if (preg_match($reg_path, $input['ids_'.$asset_type.'_path'])) { // We always validate a new path.
+            if (!$warning_paths) {
+              $input['ids_'.$asset_type.'_path'] = trim($input['ids_'.$asset_type.'_path'], '/ ');
+              $path = array_shift(explode('/', $input['ids_'.$asset_type.'_path']));
+              $old_path = array_shift(explode('/', $input['ids_'.$asset_type.'_old_path']));
+              if (($path !== $old_path) && idsimport_check_existing_rules($path)) { // If the warning has already been displayed and it has the same beginning as the old path, we don not show it.
+                $warning_paths = sprintf(__('Warning: Rewrite rule(s) beginning with \'%s\' already exist. This might create a conflict in Wordpress\' URL rewriting process. In this case, please consider using other paths.'), $path);
+              }
+            }
+          }
+          else {
+            $error = TRUE;
+            $error_message .= ' ' . $input['ids_'.$asset_type.'_path'] . __(' is not a valid path.');
+            $input['ids_'.$asset_type.'_path'] = $input['ids_'.$asset_type.'_old_path'];
+          }
+        }
+        if (!$error) {
+          $input['ids_'.$asset_type.'_old_path'] = $input['ids_'.$asset_type.'_path'];
+        }
+      }
+    }
+    if ($warning_paths) {
+      add_settings_error('idsimport_options', 'idsimport_errors', $warning_paths, 'updated');
+    }
   }
   else {
     $input['include_imported_documents'] = idsapi_variable_get('idsimport', 'include_imported_documents', IDS_IMPORT_INCLUDE_IMPORTED_DOCUMENTS);
@@ -193,9 +213,16 @@ function idsimport_validate_options($input) {
   else {
     $input['setup_done'] = TRUE;
   }
-
   return $input;
 }
 
-
+function idsimport_check_existing_rules($path) {
+  global $wp_rewrite;
+  if ($path && !empty($wp_rewrite->rules)) {
+    return preg_grep('#^'.$path.'/#', array_keys($wp_rewrite->rules));
+  }
+  else {
+    return FALSE;
+  }
+}
 
