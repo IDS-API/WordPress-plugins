@@ -68,7 +68,7 @@ add_filter('query_vars', 'idsimport_query_vars');
 add_action('pre_get_posts', 'idsimport_include_idsassets_loop');
 add_filter('pre_get_posts', 'idsimport_filter_posts');
 add_filter('post_type_link', 'idsimport_post_link');
-//Uncomment to filter category names when editing the categories, too.
+//Uncomment to filter category names (removing IDS' id) when editing the categories, too.
 //add_filter('get_term', 'idsimport_filter_get_term');
 add_action('delete_term', 'idsimport_delete_term', 10, 3);
 add_action('generate_rewrite_rules', 'idsimport_create_rewrite_rules');
@@ -168,22 +168,15 @@ function idsimport_taxonomies_init() {
       add_filter($manage_columns_filter, 'idsimport_edit_categories_header', 10, 2);
       add_action($manage_columns_action, 'idsimport_edit_categories_populate_rows', 10, 3);
     }
-    $countries_taxonomy = $dataset . '_countries';
-    $regions_taxonomy = $dataset . '_regions';
-    if ((taxonomy_exists($countries_taxonomy)) && (taxonomy_exists($regions_taxonomy))) {
-      register_taxonomy_for_object_type($regions_taxonomy, $countries_taxonomy);
-    }
   }
 }
 
 function idsimport_post_link($url) {
   global $post;
+  global $pagenow;
   $post_type = get_post_type($post);
   if (idsapi_variable_get('idsimport', 'default_dataset', IDS_IMPORT_DEFAULT_DATASET_ADMIN) == 'all') { // TODO: Generalize.
     $site = get_query_var('ids_site');
-  }
-  else {
-    $site = '';
   }
   if (($post_type == 'ids_documents') || ($post_type == 'ids_organisations')) {
     if (get_option('permalink_structure')) {
@@ -194,8 +187,16 @@ function idsimport_post_link($url) {
         }
         $new_path .= "/$site";
       }
-      if ($new_path) {
-        $url = preg_replace('/'.$post_type.'/', $new_path, $url);
+      if ($new_path) { // %post_type% is then used by get_sample_permalink() in post.php so we keep it.
+        if ($pagenow === 'post.php') {
+          $post_type_replacement = 'type-' . rand();
+          $url = str_replace('%'.$post_type.'%', $post_type_replacement, $url);
+          $url = str_replace($post_type, $new_path, $url);
+          $url = str_replace($post_type_replacement, '%'.$post_type.'%', $url);
+        }
+        else {
+          $url = str_replace($post_type, $new_path, $url);
+        }
       }
     }
     elseif ($site) {
@@ -298,6 +299,7 @@ function idsimport_delete_taxonomy_terms($taxonomy) {
 
 // Create a new taxonomy.
 function idsimport_new_taxonomy($taxonomy_name, $taxonomy_label, $singular_name, $is_hierarchical) {
+  global $wp_rewrite;
   if (!taxonomy_exists($taxonomy_name)) {
     $labels = array(
       'name' => _x( $taxonomy_label, 'taxonomy general name' ),
@@ -325,6 +327,7 @@ function idsimport_new_taxonomy($taxonomy_name, $taxonomy_label, $singular_name,
       array ('ids_documents', 'ids_organisations'),
       $args
     );
+    $wp_rewrite->flush_rules();
   }
 }
 

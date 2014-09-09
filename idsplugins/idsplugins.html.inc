@@ -17,8 +17,11 @@ function ids_get_field($field_name, $format='', $separator=', ') {
   global $post;
   $fields = (isset($post->{$field_name}) ? $post->{$field_name} : get_post_meta($post->ID, $field_name));
   if (is_array($fields)) {
-    array_walk($fields, 'ids_format_field', $format);
-    $fields = implode($separator, $fields);
+    $array_fields=array();
+    foreach ($fields as $field) {
+      $array_fields[] = ids_format_field($field, $format);
+    }
+    $fields = implode($separator, $array_fields);
   }
   else {
     $fields = ids_format_field($fields, $format);
@@ -356,6 +359,7 @@ function  ids_select_box($select_name, $id, $items, $selected_values = array(), 
 }
 
 // Generate input field.
+// TODO: Generalize.
 function ids_input_field($name, $size, $value, $id, $label, $description, $class_field, $required) {
 	$html  = "<input name='$name' id='$id' class='$class_field' type='text' value='$value' size='$size' aria-required='$required' />";
 	$html .= "<p class='description'>$description</p>";
@@ -363,6 +367,7 @@ function ids_input_field($name, $size, $value, $id, $label, $description, $class
 }
 
 // Generate <tr> field wrapper.
+// TODO: Generalize.
 function ids_tr_field_wrapper($class, $field_name, $label, $contents) {
 	$html  = "<tr class='$class'>";
 	$html .= "	<th scope='row' valign='top'>";
@@ -376,6 +381,7 @@ function ids_tr_field_wrapper($class, $field_name, $label, $contents) {
 }
 
 // Generate <div> field wrapper.
+// TODO: Generalize.
 function ids_div_field_wrapper($class, $field_name, $label, $contents) {
 	$html  = "<div class='$class'>";
   if ($field_name && $label) {

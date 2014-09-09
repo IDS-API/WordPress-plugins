@@ -86,9 +86,14 @@ function idsapi_report_errors() {
 // Set the value of a parameter.
 function idsapi_variable_set($group, $variable_name, $value) {
   $options_name = $group . '_options';
-  $options = get_option($options_name);
-  $options[$variable_name] = $value;
-  update_option($options_name, $options);
+  if ($options = get_option($options_name)) {
+    $options[$variable_name] = $value;
+    update_option($options_name, $options);
+  }
+  else {
+    $options[$variable_name] = $value;
+    add_option($options_name, $options);
+  }
 }
 
 // Retrieve the value of a saved parameter

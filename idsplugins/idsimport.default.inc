@@ -18,7 +18,9 @@ define('IDS_IMPORT_IMPORT_RECURRENCE_ASSETS', 'daily');
 define('IDS_IMPORT_IMPORT_RECURRENCE_CATEGORIES', 'monthly');
 define('IDS_IMPORT_USER_EMAIL','api@ids.ac.uk');
 define('IDS_IMPORT_MENU_TITLE', 'IDS Import');
-define('IDS_IMPORT_TAXONOMY', 'idsimport_taxonomy');
+// This might be defined in IDS Expose, too.
+if (!defined('IDS_IMPORT_TAXONOMY')) define('IDS_IMPORT_TAXONOMY', 'idsimport_taxonomy');
+
 define('IDS_IMPORT_DEFAULT_LANGUAGE', 'en');
 define('IDS_IMPORT_UPDATED_ASSETS', 'keep');
 

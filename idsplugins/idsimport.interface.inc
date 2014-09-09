@@ -333,6 +333,7 @@ function idsimport_render_form() {
 
     <!-- Beginning of the Plugin Options Form -->
 		<form method="post" id="ids_import_form" action="options.php" onSubmit="selectAllMappings()">
+    <!-- TODO: use selectAllClass() instead of selectAllMappings() -->
       <?php
           settings_fields('idsimport');
       ?>

@@ -229,6 +229,9 @@ class IdsApiObjectAssetDocument extends IdsApiObjectAsset {
   // Publication date. Date (example: 2004-01-01 00:00:00). Year that the research document was first published.
   public $publication_date;
 
+  // Publication year.
+  public $publication_year;
+
   // Publisher.
   public $publisher;
 
@@ -271,6 +274,9 @@ class IdsApiObjectAssetDocument extends IdsApiObjectAsset {
     }
     if (isset($object['publication_date'])) {
       $this->publication_date = $object['publication_date'];
+    }
+    if (isset($object['publication_year'])) {
+      $this->publication_year = $object['publication_year'];
     }
     if (isset($object['publisher'])) {
       $this->publisher = $object['publisher'];

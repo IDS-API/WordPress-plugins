@@ -18,10 +18,10 @@ function changeFields() {
   $jqorig.each($jqorig('.idsexpose-content-types'), function(i, type) { 
     type_name = $jqorig(type).attr("id");
     if ($jqorig(type).prop("checked")) {
-      $jqorig('#' + 'fields-' + type_name).show();
+      $jqorig('.' + 'fields-' + type_name).show();
     }
     else {
-      $jqorig('#' + 'fields-' + type_name).hide();
+      $jqorig('.' + 'fields-' + type_name).hide();
     }
   });
 }
@@ -138,6 +138,24 @@ function addMappings(id_source, id_target, id_mappings) {
       $jqorig('#' + id_mappings).append($jqorig("<option></option>").attr("value", value_mapping).text(title_mapping));
     }
   });
+}
+
+function addFieldMapping(id_source, id_target, id_mappings) {
+  var source_val = $jqorig('#' + id_source + ' option:selected').val();
+  var target_val = $jqorig('#' + id_target).val();
+  if (target_val) {
+    text_mapping = source_val + ' --> ' + target_val;
+    value_mapping = source_val + ',' + target_val;
+    existing_value = $jqorig('#' + id_mappings + ' option[name="' + source_val + '"]');
+    if (existing_value.val() == undefined) {
+      $jqorig('#' + id_mappings).append($jqorig("<option></option>").attr("value", value_mapping).attr("name", source_val).text(text_mapping));
+    }
+    else{
+      existing_value.val(value_mapping);
+      existing_value.text(text_mapping);
+    }
+    $jqorig('#' + id_target).val('');
+  }
 }
 
 function populateSelectBoxes() {
@@ -284,6 +302,7 @@ function collapseTree(tree) {
   $jqtree(tree).jqxTree('collapseAll');
 }
 
+//TODO: Use selectAllClass() instead.
 function selectAllMappings() {
   $jqorig.each(['eldis', 'bridge'], function(i, dataset) { 
     $jqorig.each(['countries', 'regions', 'themes'], function(j, category) {
@@ -291,6 +310,11 @@ function selectAllMappings() {
       selectAll(id_select);
     });
   });
+}
+
+function selectAllClass(select_class) {
+  $jqorig("." + select_class + ' option').prop('selected', true);
+  $jqchosen("." + select_class).trigger("liszt:updated");
 }
 
 function removeMappings(id_cat_field) {

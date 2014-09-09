@@ -523,6 +523,7 @@ function idsimport_insert_asset($dataset, $post_type, $asset, $duplicated = FALS
       if (isset($asset->authors)) { idsimport_add_post_array_meta($post_id, 'authors', $asset->authors); }
       if (isset($asset->language_name)) { add_post_meta($post_id, 'language_name', $asset->language_name, TRUE); }
       if (isset($asset->publication_date)) { add_post_meta($post_id, 'publication_date', $asset->publication_date, TRUE); }
+      if (isset($asset->publication_year)) { add_post_meta($post_id, 'publication_year', $asset->publication_year, TRUE); }
       if (isset($asset->licence_type)) { add_post_meta($post_id, 'licence_type', $asset->licence_type, TRUE); }
       if (isset($asset->publisher_array)) { idsimport_add_post_array_meta($post_id, 'publisher_array', $asset->publisher_array, TRUE); }
       if (isset($asset->urls)) { idsimport_add_post_array_meta($post_id, 'urls', $asset->urls); }
@@ -611,6 +612,7 @@ function idsimport_update_asset($post_id, $dataset, $post_type, $asset) {
       if (isset($asset->authors)) { idsimport_update_post_array_meta($post_id, 'authors', $asset->authors); }
       if (isset($asset->language_name)) { update_post_meta($post_id, 'language_name', $asset->language_name); }
       if (isset($asset->publication_date)) { update_post_meta($post_id, 'publication_date', $asset->publication_date); }
+      if (isset($asset->publication_year)) { update_post_meta($post_id, 'publication_year', $asset->publication_year); }
       if (isset($asset->licence_type)) { update_post_meta($post_id, 'licence_type', $asset->licence_type); }
       if (isset($asset->publisher)) { update_post_meta($post_id, 'publisher', $asset->publisher); }
       if (isset($asset->publisher_country)) { update_post_meta($post_id, 'publisher_country', $asset->licence_type); }
