@@ -5,7 +5,7 @@
 global $post;
 $default_standard_fields = array('post_title', 'guid', 'post_content');
 //TODO: Generalize taxonomies and add to admin.
-$default_taxonomy_fields = array('name', 'term_id');
+$default_taxonomy_fields = array('name', 'slug');
 $ids_taxonomy_fields = array_merge($default_taxonomy_fields, array('object_id'));
 $post_type = (get_query_var('post_type')) ? get_query_var('post_type') : 'post';
 $exposed_custom_fields = idsapi_variable_get('idsexpose', 'custom_fields_'.$post_type, array());
@@ -73,8 +73,8 @@ echo '<?xml version="1.0" encoding="'.get_option('blog_charset').'"?'.'>';
       // TODO: Split tag and attributes when enabled in admin.
       foreach ($exposed_standard_fields as $field) {
         if (isset($post->{$field})) {
-          $tag = idsexpose_get_tag($field, $post_type);
-          if ($value = idsexpose_get_value($field, $post->{$field}, $post_type)) {
+          $tag = apply_filters('exposed_tag', $field, $post_type);
+          if ($value = apply_filters('exposed_post_value', $post->{$field}, $field, $post_type)) {
             idsexpose_print_xml($tag, $value);
           }
         }
@@ -85,9 +85,11 @@ echo '<?xml version="1.0" encoding="'.get_option('blog_charset').'"?'.'>';
       $post_meta = get_post_meta($post->ID);
       if ($post_meta) {
         foreach ($post_meta as $field => $value) {
-          $tag = idsexpose_get_tag($field, $post_type);
-          if ($value = idsexpose_get_value($field, $value, $post_type)) {
-            idsexpose_print_xml($tag, $value);
+          if (in_array($field, $exposed_custom_fields)) {
+            $tag = apply_filters('exposed_tag', $field, $post_type);
+            if ($value = apply_filters('exposed_post_value', $post->{$field}, $field, $post_type)) {
+              idsexpose_print_xml($tag, $value);
+            }
           }
         }
       }
@@ -95,7 +97,6 @@ echo '<?xml version="1.0" encoding="'.get_option('blog_charset').'"?'.'>';
     <?php
       // Category terms
       foreach($taxonomies as $tax_name) { 
-        echo "<$tax_name>";
         if (preg_match('/(eldis|bridge)_/', $tax_name)) {
           $taxonomy_fields = $ids_taxonomy_fields;
         }
@@ -103,17 +104,22 @@ echo '<?xml version="1.0" encoding="'.get_option('blog_charset').'"?'.'>';
           $taxonomy_fields = $default_taxonomy_fields;
         }
         if ($terms = get_the_terms($post->ID, $tax_name)) {
+          $tag_tax_name = apply_filters('exposed_tag', $tax_name, $post_type);
+          echo "<$tag_tax_name>";
           foreach ($terms as $term) {
             echo "<list-item>";
             foreach ($taxonomy_fields as $field) {
               if (isset($term->{$field})) {
-                idsexpose_print_xml($field, $term->{$field});
+                $tag = apply_filters('exposed_tag', $field, $tax_name);
+                if ($value = apply_filters('exposed_term_value', $term->{$field}, $field, $tax_name)) {
+                  idsexpose_print_xml($tag, $value);              
+                }
               }
             }
             echo "</list-item>";
           }
+          echo "</$tag_tax_name>";
         }
-        echo "</$tax_name>";
       }
     ?>
     <?php rss_enclosure(); ?>

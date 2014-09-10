@@ -69,10 +69,13 @@ function ids_new_post_type($post_type_name, $post_type_label, $singular_name) {
 
 
 // This is only for IDS taxonomies, as there is no standard way of implementing custom fields in Wordpress taxonomies.
-function ids_get_taxonomy_custom_fields($dataset_type) {
-  list($site, $type) = explode('_', $dataset_type);
-  $object['site'] = $site;
-  $fields = array_keys(get_class_vars(get_class(IdsApiObject::factory($object, $type))));
+function ids_get_taxonomy_custom_fields($taxonomy) {
+  $fields = array();
+  if (preg_match('/(eldis|bridge)_/', $taxonomy)) {
+    list($site, $type) = explode('_', $taxonomy);
+    $object['site'] = $site;
+    $fields = array_keys(get_class_vars(get_class(IdsApiObject::factory($object, $type))));
+  }
   return $fields;
 }
 
@@ -100,7 +103,21 @@ function ids_get_default_fields($post_type) {
   return $default_fields;
 }
 
-
+// Taxonomies default fields. Added 'guid', which is not really a field but constructed.
+function ids_get_term_default_fields() {
+    $fields = array (
+                'term_id',
+                'name',
+                'slug',
+                'term_group',
+                'term_taxonomy_id',
+                'taxonomy',
+                'description',
+                'parent',
+                'count',
+              );
+    return $fields;
+}
 
 
 

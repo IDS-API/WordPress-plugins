@@ -4,7 +4,9 @@
  * Adapted from Javier Corre's Custom XML feed plugin (http://javiercorre.com/)
  */
 global $wpdb;
+$taxonomy_exposed_fields = array('name', 'guid', 'description');
 $taxonomy = (get_query_var('taxonomy')) ? get_query_var('taxonomy') : 'category';
+$exposed_custom_fields = idsapi_variable_get('idsexpose', 'custom_fields_'.$taxonomy, array());
 $num_items = (isset($_GET['num_items'])) ? $_GET['num_items'] : get_option('posts_per_rss');
 $current_link = add_query_arg('taxonomy', $taxonomy, site_url() . '?feed=ids_categories');
 $current_link = add_query_arg('num_items', $num_items, $current_link);
@@ -50,35 +52,34 @@ echo '<?xml version="1.0" encoding="'.get_option('blog_charset').'"?'.'>';
 </metadata>
 <results>
 <?php foreach($terms as $term) { ?>
-  <?php
-    if (function_exists('idsimport_filter_the_category')) { // Generalize with callback functions for all the fields.
-      $term_name = idsimport_filter_the_category($term->name);
-    }
-    else {
-      $term_name = $term->name;
-    }
-  ?>
-	<item>
-  <title><?php echo $term_name; ?></title>
-	<guid><?php echo get_term_link($term); ?></guid>
-  <?php $description = isset($term->description) ? $term->description : ''; ?>
-  <description><?php echo $description; ?></description>
-  <?php
-    if ($metadata_exists) {
-      if ($term_meta = get_metadata(IDS_IMPORT_TAXONOMY, $term->term_id)) {
-        foreach ($term_meta as $key => $values) {
-          if (is_array ($values)) {
-            foreach ($values as $value) {
-              echo "<$key>" . htmlspecialchars($value, ENT_QUOTES, 'UTF-8') . "</$key>";
-            }
-          }
-          elseif (is_scalar($values)) {
-            echo "<$key>" . htmlspecialchars($values, ENT_QUOTES, 'UTF-8') . "</$key>";
+	<item>  
+    <?php 
+      // Standard fields
+      // TODO: Split tag and attributes when enabled in admin.
+      foreach ($taxonomy_exposed_fields as $field) {
+        if (isset($term->{$field})) {
+          $tag = apply_filters('exposed_tag', $field, $taxonomy);
+          if ($value = apply_filters('exposed_term_value', $term->{$field}, $field, $taxonomy)) {
+            idsexpose_print_xml($tag, $value);
           }
         }
       }
-    }
-  ?>
+    ?>
+    <?php
+      // Custom (meta) fields
+      if ($metadata_exists) {
+        if ($term_meta = get_metadata(IDS_IMPORT_TAXONOMY, $term->term_id)) {
+          foreach ($term_meta as $field => $value) {
+            if (in_array($field, $exposed_custom_fields)) {
+              $tag = apply_filters('exposed_tag', $field, $taxonomy);
+              if ($value = apply_filters('exposed_term_value', $value, $field, $taxonomy)) {
+                idsexpose_print_xml($tag, $value);
+              }
+            }
+          }
+        }
+      }
+    ?>
 	</item>
 <?php } // foreach ?>
 </results>
