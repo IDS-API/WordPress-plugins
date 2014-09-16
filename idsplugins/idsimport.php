@@ -68,8 +68,8 @@ add_filter('query_vars', 'idsimport_query_vars');
 add_action('pre_get_posts', 'idsimport_include_idsassets_loop');
 add_filter('pre_get_posts', 'idsimport_filter_posts');
 add_filter('post_type_link', 'idsimport_post_link');
-//Uncomment to filter category names (removing IDS' id) when editing the categories, too.
-//add_filter('get_term', 'idsimport_filter_get_term');
+add_filter('get_term', 'idsimport_filter_get_term');
+add_filter('get_terms', 'idsimport_filter_get_terms');
 add_action('delete_term', 'idsimport_delete_term', 10, 3);
 add_action('generate_rewrite_rules', 'idsimport_create_rewrite_rules');
 add_filter('get_previous_post_where', 'idsimport_adjacent_post_where');
@@ -398,6 +398,13 @@ function idsimport_filter_get_term($term) {
     }
   }
   return $term;
+}
+
+function idsimport_filter_get_terms($terms) {
+  foreach ($terms as $term) {
+    $filtered_terms[] = idsimport_filter_get_term($term);
+  }
+  return $filtered_terms;
 }
 
 function idsimport_filter_list_cats($cat_name) {
