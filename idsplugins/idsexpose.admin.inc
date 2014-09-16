@@ -1,5 +1,12 @@
 <?php
 
+// Global settings
+global $default_standard_fields;
+global $default_taxonomy_fields;
+$default_standard_fields = array('post_title', 'post_content');
+$default_taxonomy_fields = array('name', 'slug');
+
+
 // Checks if it has to display the admin settings or if it has to initialize the plugin's data, etc.
 function idsexpose_admin_main() {
   if (!current_user_can( 'manage_options')) {
@@ -171,8 +178,11 @@ function idsexpose_help_page() {
 
 // Render the plugin's main admin form.
 function idsexpose_render_form() {
+  global $default_standard_fields;
+  global $default_taxonomy_fields;
   $select_post_types = idsexpose_get_post_types();
   $select_taxonomies = idsexpose_get_taxonomies();
+  // Initialization of mappings. TODO: Generalize.
   $wp_post_fields_mappings = array('post_title' => 'title', 'post_content' => 'description');
   $ids_post_fields_mappings = $wp_post_fields_mappings + array('bridge_object_id' => 'object_id', 'eldis_object_id' => 'object_id');
   $default_post_mappings = array('post' => $wp_post_fields_mappings, 'ids_documents' => $ids_post_fields_mappings, 'ids_organisations' => $ids_post_fields_mappings);
@@ -181,7 +191,6 @@ function idsexpose_render_form() {
   $default_term_mappings = array('category' => $wp_term_fields_mappings, 'bridge_countries' => $ids_term_fields_mappings, 'bridge_regions' => $ids_term_fields_mappings, 'bridge_themes' => $ids_term_fields_mappings, 'eldis_countries' => $ids_term_fields_mappings, 'eldis_regions' => $ids_term_fields_mappings, 'eldis_themes' => $ids_term_fields_mappings);
   $default_mappings = $default_post_mappings + $default_term_mappings;
   $current_mappings = idsapi_variable_get('idsexpose', 'field_mappings', $default_mappings);
-  //$current_mappings = idsapi_variable_get('idsexpose', 'field_mappings', array());
 	?>
   <div class="wrap">
 	<div class="ids-wrap">
@@ -211,7 +220,6 @@ function idsexpose_render_form() {
           <td colspan="2">
             <p class="description">
             <?php _e('Please indicate the content that you want to make available to the exposer.'); ?><br>
-            <?php _e('The fields <b>post_title</b>, <b>post_content</b> and <b>guid</b> will always be exposed for posts and the fields <b>name</b>, <b>description</b> and the <b>slug</b> will be exposed for taxonomy terms.'); ?><br>
             </p>
           </td>
         </tr>
@@ -227,7 +235,7 @@ function idsexpose_render_form() {
             <?php foreach ($select_post_types as $post_type => $label) { ?>
               <label><input id="<?php echo $post_type; ?>" class="idsexpose-content-types" name="idsexpose_options[content_types][<?php echo $post_type; ?>]" type="checkbox" 
               <?php echo (isset($selected_types[$post_type]) ? 'checked="yes"' : ''); ?> onchange="changeFields();" /> <strong><?php _e($label); ?></strong></label></br>
-              <div class="<?php echo 'fields-' . $post_type; ?>" style="border:1px solid grey;width:400px;">
+              <div class="<?php echo 'fields-' . $post_type; ?>" style="border:1px solid grey;width:600px;">
                 <table>
                 <tr>
                 <td>
@@ -238,7 +246,7 @@ function idsexpose_render_form() {
                 $var_name = 'standard_fields_' . $post_type;
                 $select_id = 'idsexpose_' . $var_name;
                 $select_name = "idsexpose_options[$var_name][]";
-                echo ids_select_box($select_name, $select_id, $standard_fields, idsapi_variable_get('idsexpose', $var_name, array()), array('multiple' => 'multiple'));
+                echo ids_select_box($select_name, $select_id, $standard_fields, idsapi_variable_get('idsexpose', $var_name, $default_standard_fields), array('multiple' => 'multiple'));
                 ?>
                 </br>
                 <a href="javascript:selectAll('<?php echo $select_id; ?>');"><?php _e('Select all'); ?></a> / 
@@ -281,10 +289,24 @@ function idsexpose_render_form() {
               <?php echo (isset($selected_taxonomies[$taxonomy]) ? 'checked="yes"' : ''); ?> onchange="changeFields();" /> <strong><?php _e($label); ?></strong></label></br>
               <!-- In the case of taxonomies, we only give the option to select fields for IDS taxonomies, as there is not a default way of implementing custom fields for taxonomies in Wordpress -->
               <?php // TODO: Generalise.
-              if ($taxonomy == 'eldis_countries' || $taxonomy == 'eldis_regions' || $taxonomy == 'eldis_themes' || $taxonomy == 'bridge_countries' || $taxonomy == 'bridge_regions' || $taxonomy == 'bridge_themes') { ?>
-              <div class="<?php echo 'fields-' . $taxonomy; ?>" style="border:1px solid grey;width:400px;">
+              //if ($taxonomy == 'eldis_countries' || $taxonomy == 'eldis_regions' || $taxonomy == 'eldis_themes' || $taxonomy == 'bridge_countries' || $taxonomy == 'bridge_regions' || $taxonomy == 'bridge_themes') { ?>
+              <div class="<?php echo 'fields-' . $taxonomy; ?>" style="border:1px solid grey;width:600px;">
                 <table>
                 <tr>
+                <td>
+                <i>Standard Wordpress fields</i></br>
+                <?php
+                // Standard fields. Some fields are always included (title, guid).
+                $standard_fields = ids_get_term_default_fields();
+                $var_name = 'standard_fields_' . $taxonomy;
+                $select_id = 'idsexpose_' . $var_name;
+                $select_name = "idsexpose_options[$var_name][]";
+                echo ids_select_box($select_name, $select_id, $standard_fields, idsapi_variable_get('idsexpose', $var_name, $default_taxonomy_fields), array('multiple' => 'multiple'));
+                ?>
+                </br>
+                <a href="javascript:selectAll('<?php echo $select_id; ?>');"><?php _e('Select all'); ?></a> / 
+                <a href="javascript:deselectAll('<?php echo $select_id; ?>');"><?php _e('Deselect all'); ?></a>                
+                </td>
                 <td>
                 <?php
                 // Custom fields
@@ -306,7 +328,7 @@ function idsexpose_render_form() {
                 </table>
                 <!--hr style="width:600px;margin-left:0;text-align:left;"-->
               </div>
-              <?php } ?>
+              <?php // } ?>
               </br>
             <?php } ?>
           </td>

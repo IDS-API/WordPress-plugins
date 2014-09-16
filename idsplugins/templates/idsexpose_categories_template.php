@@ -4,15 +4,21 @@
  * Adapted from Javier Corre's Custom XML feed plugin (http://javiercorre.com/)
  */
 global $wpdb;
-$taxonomy_exposed_fields = array('name', 'guid', 'description');
+global $default_taxonomy_fields;
 $taxonomy = (get_query_var('taxonomy')) ? get_query_var('taxonomy') : 'category';
+$exposed_standard_fields = idsapi_variable_get('idsexpose', 'standard_fields_'.$taxonomy, $default_taxonomy_fields);
 $exposed_custom_fields = idsapi_variable_get('idsexpose', 'custom_fields_'.$taxonomy, array());
 $num_items = (isset($_GET['num_items'])) ? $_GET['num_items'] : get_option('posts_per_rss');
 $current_link = add_query_arg('taxonomy', $taxonomy, site_url() . '?feed=ids_categories');
 $current_link = add_query_arg('num_items', $num_items, $current_link);
 $offset = (isset($_GET['offset'])) ? $_GET['offset'] : 0;
-$table_metadata = $wpdb->prefix . IDS_IMPORT_TAXONOMY . 'meta';
-$metadata_exists = ($wpdb->get_var("SHOW TABLES LIKE '$table_metadata'") == $table_metadata);
+if (defined('IDS_IMPORT_TAXONOMY')) {
+  $table_metadata = $wpdb->prefix . IDS_IMPORT_TAXONOMY . 'meta';
+  $metadata_exists = ($wpdb->get_var("SHOW TABLES LIKE '$table_metadata'") == $table_metadata);
+}
+else {
+  $metadata_exists = FALSE;
+}
 if (is_string($taxonomy)) {
   $taxonomies = array($taxonomy);
 }
@@ -56,7 +62,7 @@ echo '<?xml version="1.0" encoding="'.get_option('blog_charset').'"?'.'>';
     <?php 
       // Standard fields
       // TODO: Split tag and attributes when enabled in admin.
-      foreach ($taxonomy_exposed_fields as $field) {
+      foreach ($exposed_standard_fields as $field) {
         if (isset($term->{$field})) {
           $tag = apply_filters('exposed_tag', $field, $taxonomy);
           if ($value = apply_filters('exposed_term_value', $term->{$field}, $field, $taxonomy)) {
@@ -64,10 +70,8 @@ echo '<?xml version="1.0" encoding="'.get_option('blog_charset').'"?'.'>';
           }
         }
       }
-    ?>
-    <?php
       // Custom (meta) fields
-      if ($metadata_exists) {
+      if ($metadata_exists && !empty($exposed_custom_fields)) {
         if ($term_meta = get_metadata(IDS_IMPORT_TAXONOMY, $term->term_id)) {
           foreach ($term_meta as $field => $value) {
             if (in_array($field, $exposed_custom_fields)) {

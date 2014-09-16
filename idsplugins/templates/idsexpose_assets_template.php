@@ -3,15 +3,23 @@
  * Custom XML feed generator template.
  */
 global $post;
-$default_standard_fields = array('post_title', 'guid', 'post_content');
-//TODO: Generalize taxonomies and add to admin.
-$default_taxonomy_fields = array('name', 'slug');
-$ids_taxonomy_fields = array_merge($default_taxonomy_fields, array('object_id'));
+global $default_standard_fields;
+global $default_taxonomy_fields;
+global $ids_taxonomy_fields;
+
 $post_type = (get_query_var('post_type')) ? get_query_var('post_type') : 'post';
 $exposed_custom_fields = idsapi_variable_get('idsexpose', 'custom_fields_'.$post_type, array());
-$exposed_standard_fields = array_merge($default_standard_fields, idsapi_variable_get('idsexpose', 'standard_fields_'.$post_type, array()));
+$exposed_standard_fields = idsapi_variable_get('idsexpose', 'standard_fields_'.$post_type, $default_standard_fields);
 $paged = (get_query_var('paged')) ? get_query_var('paged') : 1;
 $num_items = (isset($_GET['num_items'])) ? $_GET['num_items'] : get_option('posts_per_rss');
+$table_metadata = $wpdb->prefix . IDS_IMPORT_TAXONOMY . 'meta';
+if (defined('IDS_IMPORT_TAXONOMY')) {
+  $table_metadata = $wpdb->prefix . IDS_IMPORT_TAXONOMY . 'meta';
+  $metadata_exists = ($wpdb->get_var("SHOW TABLES LIKE '$table_metadata'") == $table_metadata);
+}
+else {
+  $metadata_exists = FALSE;
+}
 if (is_string($post_type)) {
   $post_types = array($post_type);
 }
@@ -97,22 +105,32 @@ echo '<?xml version="1.0" encoding="'.get_option('blog_charset').'"?'.'>';
     <?php
       // Category terms
       foreach($taxonomies as $tax_name) { 
-        if (preg_match('/(eldis|bridge)_/', $tax_name)) {
-          $taxonomy_fields = $ids_taxonomy_fields;
-        }
-        else {
-          $taxonomy_fields = $default_taxonomy_fields;
-        }
+        $exposed_standard_taxonomy_fields = idsapi_variable_get('idsexpose', 'standard_fields_'.$tax_name, $default_taxonomy_fields);
+        $exposed_custom_taxonomy_fields = idsapi_variable_get('idsexpose', 'custom_fields_'.$tax_name, array());
         if ($terms = get_the_terms($post->ID, $tax_name)) {
           $tag_tax_name = apply_filters('exposed_tag', $tax_name, $post_type);
           echo "<$tag_tax_name>";
           foreach ($terms as $term) {
             echo "<list-item>";
-            foreach ($taxonomy_fields as $field) {
+            // Standard taxonomy fields
+            foreach ($exposed_standard_taxonomy_fields as $field) {
               if (isset($term->{$field})) {
                 $tag = apply_filters('exposed_tag', $field, $tax_name);
                 if ($value = apply_filters('exposed_term_value', $term->{$field}, $field, $tax_name)) {
-                  idsexpose_print_xml($tag, $value);              
+                  idsexpose_print_xml($tag, $value);
+                }
+              }
+            }
+            // Custom (meta) fields
+            if ($metadata_exists && !empty($exposed_custom_taxonomy_fields)) {
+              if ($term_meta = get_metadata(IDS_IMPORT_TAXONOMY, $term->term_id)) {
+                foreach ($term_meta as $field => $value) {
+                  if (in_array($field, $exposed_custom_taxonomy_fields)) {
+                    $tag = apply_filters('exposed_tag', $field, $tax_name);
+                    if ($value = apply_filters('exposed_term_value', $value, $field, $tax_name)) {
+                      idsexpose_print_xml($tag, $value);
+                    }
+                  }
                 }
               }
             }

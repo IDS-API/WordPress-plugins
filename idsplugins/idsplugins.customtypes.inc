@@ -103,20 +103,20 @@ function ids_get_default_fields($post_type) {
   return $default_fields;
 }
 
-// Taxonomies default fields. Added 'guid', which is not really a field but constructed.
+// Taxonomies default fields. Added 'slug', which is not really a field.
 function ids_get_term_default_fields() {
-    $fields = array (
-                'term_id',
-                'name',
-                'slug',
-                'term_group',
-                'term_taxonomy_id',
-                'taxonomy',
-                'description',
-                'parent',
-                'count',
-              );
-    return $fields;
+  $fields = array (
+              'term_id',
+              'name',
+              'slug',
+              'term_group',
+              'term_taxonomy_id',
+              'taxonomy',
+              'description',
+              'parent',
+              'count',
+            );
+  return array_combine($fields, $fields);
 }
 
 
