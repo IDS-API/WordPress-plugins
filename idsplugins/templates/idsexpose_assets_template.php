@@ -109,9 +109,9 @@ echo '<?xml version="1.0" encoding="'.get_option('blog_charset').'"?'.'>';
         $exposed_custom_taxonomy_fields = idsapi_variable_get('idsexpose', 'custom_fields_'.$tax_name, array());
         if ($terms = get_the_terms($post->ID, $tax_name)) {
           $tag_tax_name = apply_filters('exposed_tag', $tax_name, $post_type);
-          echo "<$tag_tax_name>";
+          echo "<$tag_tax_name-list>";
           foreach ($terms as $term) {
-            echo "<list-item>";
+            echo "<$tag_tax_name>";
             // Standard taxonomy fields
             foreach ($exposed_standard_taxonomy_fields as $field) {
               if (isset($term->{$field})) {
@@ -134,9 +134,9 @@ echo '<?xml version="1.0" encoding="'.get_option('blog_charset').'"?'.'>';
                 }
               }
             }
-            echo "</list-item>";
+            echo "</$tag_tax_name>";
           }
-          echo "</$tag_tax_name>";
+          echo "</$tag_tax_name-list>";
         }
       }
     ?>
