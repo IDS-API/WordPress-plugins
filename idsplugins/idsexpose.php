@@ -68,8 +68,8 @@ function idsexpose_admin_init(){
   if(!is_array($options)) { // The options are corrupted.
     idsexpose_delete_plugin_options();
   }
-  register_deactivation_hook( __FILE__, 'idsexpose_deactivate' );
-  register_uninstall_hook(__FILE__, 'idsexpose_uninstall');
+  //register_deactivation_hook( __FILE__, 'idsexpose_deactivate' );
+  //register_uninstall_hook(__FILE__, 'idsexpose_uninstall');
 }
 
 // Delete options entries
@@ -149,8 +149,8 @@ function idsexpose_query_vars($query_vars) {
 */
 
 function idsexpose_get_post_types() {
-  $array_post_types = array('post' => 'Default Wordpress posts');
-  $post_types = get_post_types(array('public' => true, '_builtin' => false), 'objects') ;
+  $array_post_types = array();//array('post' => 'Default Wordpress posts');
+  $post_types = get_post_types(array('public' => true), 'objects') ;
   foreach ($post_types as $post_type) {
     $array_post_types[$post_type->name] = $post_type->labels->menu_name;
   }
@@ -158,8 +158,8 @@ function idsexpose_get_post_types() {
 }
 
 function idsexpose_get_taxonomies() {
-  $array_taxonomies = array('category' => 'Default Wordpress categories');
-  $taxonomies = get_taxonomies(array('public' => true, '_builtin' => false), 'objects');
+  $array_taxonomies = array();
+  $taxonomies = get_taxonomies(array('public' => true), 'objects');
   foreach ($taxonomies as $taxonomy) {
     $array_taxonomies[$taxonomy->name] = $taxonomy->labels->menu_name;
   }

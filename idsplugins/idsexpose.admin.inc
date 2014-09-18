@@ -178,6 +178,9 @@ function idsexpose_help_page() {
 
 // Render the plugin's main admin form.
 function idsexpose_render_form() {
+  global $ids_categories;
+  global $ids_assets;
+  global $ids_datasets;
   global $default_standard_fields;
   global $default_taxonomy_fields;
   $select_post_types = idsexpose_get_post_types();
@@ -185,10 +188,24 @@ function idsexpose_render_form() {
   // Initialization of mappings. TODO: Generalize.
   $wp_post_fields_mappings = array('post_title' => 'title', 'post_content' => 'description');
   $ids_post_fields_mappings = $wp_post_fields_mappings + array('bridge_object_id' => 'object_id', 'eldis_object_id' => 'object_id');
-  $default_post_mappings = array('post' => $wp_post_fields_mappings, 'ids_documents' => $ids_post_fields_mappings, 'ids_organisations' => $ids_post_fields_mappings);
   $wp_term_fields_mappings = array('name' => 'title', 'slug' => 'guid');
   $ids_term_fields_mappings = $wp_term_fields_mappings + array('bridge_object_id' => 'object_id', 'eldis_object_id' => 'object_id');
-  $default_term_mappings = array('category' => $wp_term_fields_mappings, 'bridge_countries' => $ids_term_fields_mappings, 'bridge_regions' => $ids_term_fields_mappings, 'bridge_themes' => $ids_term_fields_mappings, 'eldis_countries' => $ids_term_fields_mappings, 'eldis_regions' => $ids_term_fields_mappings, 'eldis_themes' => $ids_term_fields_mappings);
+  $default_post_mappings = array();
+  foreach (array_keys($select_post_types) as $post_type) {
+    $default_post_mappings[$post_type] = $wp_post_fields_mappings;
+  }
+  foreach ($ids_assets as $asset) {
+    $default_post_mappings['ids_'.$asset] = $ids_post_fields_mappings;
+  }
+  $default_term_mappings = array();
+  foreach (array_keys($select_taxonomies) as $taxonomy) {
+    $default_term_mappings[$taxonomy] = $wp_term_fields_mappings;
+  }
+  foreach ($ids_datasets as $dataset) {
+    foreach ($ids_categories as $category) {
+      $default_term_mappings[$dataset.'_'.$category] = $ids_term_fields_mappings;
+    }
+  }
   $default_mappings = $default_post_mappings + $default_term_mappings;
   $current_mappings = idsapi_variable_get('idsexpose', 'field_mappings', $default_mappings);
 	?>
@@ -349,7 +366,7 @@ function idsexpose_render_form() {
         <!------------------------------------------------- MAPPINGS - POST TYPES ----------------------------------------->
         <?php foreach ($select_post_types as $post_type => $label) { ?>
         <tr class="<?php echo 'fields-' . $post_type; ?>">
-          <th scope="row"><?php echo $post_type; ?></th>
+          <th scope="row"><?php echo $label; ?></th>
           <td>
               <table id="<?php echo 'field-mappings-' . $post_type; ?>" style="border:1px solid grey">
                 <tr>
@@ -429,7 +446,7 @@ function idsexpose_render_form() {
         <!------------------------------------------------- MAPPINGS - TAXONOMIES ----------------------------------------->
         <?php foreach ($select_taxonomies as $taxonomy => $label) { ?>
         <tr class="<?php echo 'fields-' . $taxonomy; ?>">
-          <th scope="row"><?php echo $taxonomy; ?></th>
+          <th scope="row"><?php echo $label; ?></th>
           <td>
               <table id="<?php echo 'field-mappings-' . $taxonomy; ?>" style="border:1px solid grey">
                 <tr>

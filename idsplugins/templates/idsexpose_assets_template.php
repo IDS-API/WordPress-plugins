@@ -29,6 +29,7 @@ elseif (is_array($post_type)) {
 $args = array( 
   'post_type' => $post_types, 
   'posts_per_page' => $num_items,
+  'post_status' => 'publish',
   'paged' => $paged,
 );
 if (isset($_GET['cats'])) {
