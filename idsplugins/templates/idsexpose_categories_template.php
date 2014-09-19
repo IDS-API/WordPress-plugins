@@ -1,7 +1,6 @@
 <?php
 /**
  * Custom XML feed generator template.
- * Adapted from Javier Corre's Custom XML feed plugin (http://javiercorre.com/)
  */
 global $wpdb;
 global $default_taxonomy_fields;
@@ -37,13 +36,11 @@ if ($total_terms) {
   $prev_page_offset = ($offset) ? $offset - $num_items : 0;
 }
 header('Content-Type: ' . feed_content_type('rss-http') . '; charset=' . get_option('blog_charset'), true);
-echo '<?xml version="1.0" encoding="'.get_option('blog_charset').'"?'.'>';
+echo '<?xml version="1.0" encoding="'.get_option('blog_charset').'"?>';
 ?>
-<channel>
+<channel lang="<?php bloginfo_rss('language'); ?>">
 <response>
 	<response_date><?php $time= current_time( 'mysql' ); echo $time ;?></response_date>
-	<last_build_date></last_build_date>
-	<language><?php bloginfo_rss( 'language' ); ?></language>
 </response>
 <metadata>
   <num_items><?php echo $num_items; ?></num_items>

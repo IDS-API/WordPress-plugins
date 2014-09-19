@@ -46,13 +46,11 @@ $loop = new WP_Query($args);
 $next_page = ($paged < $loop->max_num_pages) ? $paged + 1 : 0;
 $prev_page = ($paged > 1) ? $paged - 1 : 0;
 header('Content-Type: ' . feed_content_type('rss-http') . '; charset=' . get_option('blog_charset'), true);
-echo '<?xml version="1.0" encoding="'.get_option('blog_charset').'"?'.'>';
+echo '<?xml version="1.0" encoding="'.get_option('blog_charset').'"?>';
 ?>
-<channel>
+<channel lang="<?php bloginfo_rss('language'); ?>">
 <response>
 	<response_date><?php echo current_time('mysql'); ?></response_date>
-	<last_build_date></last_build_date>
-	<language><?php bloginfo_rss('language'); ?></language>
 </response>
 <metadata>
 	<identifier><?php echo site_url(); ?></identifier>
