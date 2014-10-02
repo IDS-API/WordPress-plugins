@@ -773,14 +773,28 @@ function idsimport_update_categories_post($post_id, $dataset, $taxonomy, $catego
   if ($idsimport_map_categories) {
     // Assign assets to existing Wordpress categories (based on mappings).
     $mappings = idsimport_get_mappings($taxonomy);
-    $mappings_ids = array();
+    $tax_mappings = array();
     foreach ($categories as $category) {
       if (isset($mappings[$category->object_id])) {
-        $mappings_ids[] = $mappings[$category->object_id];
+        $mapping = $mappings[$category->object_id];
+        list($wp_taxonomy, $wp_term_id) = explode('-', $mapping);
+        if ($wp_taxonomy && $wp_term_id) {
+          $tax_mappings[$wp_taxonomy][] = $wp_term_id;
+        }
       }
     }
-    if (!empty($mappings_ids)) {
-      wp_set_post_terms($post_id, $mappings_ids, 'category', TRUE);
+    foreach ($tax_mappings as $tax_name => $mappings_ids) {
+      if (is_taxonomy_hierarchical($tax_name)) {
+        wp_set_post_terms($post_id, $mappings_ids, $tax_name, TRUE);
+      }
+      else {
+        $mappings_names = array();
+        foreach ($mappings_ids as $mapping_id) {
+          $mapped_term = get_term($mapping_id, $tax_name);
+          $mappings_names[] = $mapped_term->name;
+        }
+        wp_set_post_terms($post_id, $mappings_names, $tax_name, TRUE);
+      }
     }
   }
 }

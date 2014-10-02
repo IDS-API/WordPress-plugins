@@ -135,7 +135,7 @@ function addMappings(id_source, id_target, id_mappings) {
     existing_value = $jqorig('#' + id_mappings + ' option[value="' + value_mapping + '"]').val();
     if (existing_value == undefined) {
       title_mapping = $jqorig(selected).text() + ' --> ' + target_title;
-      $jqorig('#' + id_mappings).append($jqorig("<option></option>").attr("value", value_mapping).text(title_mapping));
+      $jqorig('#' + id_mappings).prepend($jqorig("<option></option>").attr("value", value_mapping).text(title_mapping));
     }
   });
 }
@@ -265,7 +265,10 @@ function populateSelectBoxes() {
           cats_mapping = mapping.split(',');
           ids_category = cats_mapping[0];
           wp_category = cats_mapping[1];
-          wp_category_name = $jqorig('#' + dataset + '_' + category + '_target option[value="' + wp_category + '"]').text();
+          term = wp_category.split('-');
+          tax_name = term[0];
+          wp_category_select_id = dataset + '_' + category + '_' + tax_name + '_target';
+          wp_category_name = $jqorig('#' + wp_category_select_id + ' option[value="' + wp_category + '"]').text();
           title = ids_array_categories[dataset][category][ids_category] + ' --> ' + wp_category_name;
           select_category_mappings.append($jqorig("<option></option>").attr("value", mapping).text(title));
         });

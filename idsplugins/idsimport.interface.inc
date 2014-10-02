@@ -784,23 +784,26 @@ function idsimport_render_form() {
           <td>
             <label><input id="ids_map_categories" name="idsimport_options[import_map_categories]" type="checkbox" <?php echo ($idsimport_map_categories ? 'checked="yes"' : ''); ?> onchange="changeMappingsSettings();" /> Map to existing categories </label><br />
             <p class="description">
-              <?php _e('Map IDS countries, regions and themes to categories to terms in the default Wordpress \'category\' taxonomy when importing documents and/or organisations.'); ?><br/>
+              <?php _e('Map IDS countries, regions and themes to categories to terms in Wordpress\' taxonomies when importing documents and/or organisations.'); ?><br/>
               <?php _e('Please note that this option is independent of the category importing settings: an IDS category can be imported as a new term and, in addition, mapped to an existing category.'); ?></p>
           </td>
         </tr>
         </table>
 
-        <!-- Wordpress default taxonomy -->
+        <!-- Wordpress taxonomies -->
         <?php
-          $wp_categories_select = array();
-          $all_wp_categories = get_categories( array('taxonomy' => 'category', 'hide_empty' => FALSE) );
-          foreach ($all_wp_categories as $wp_category) {
-            $wp_categories_select[$wp_category->term_id] = $wp_category->name;
+          $wp_terms_select = array();
+          $all_taxonomies = get_taxonomies(array('public' => TRUE, 'show_ui' => TRUE));
+          foreach($all_taxonomies as $tax_name) { 
+            $all_wp_terms = get_terms($tax_name, array('hide_empty' => FALSE));
+            foreach ($all_wp_terms as $wp_term) {
+              $wp_terms_select[$tax_name][$tax_name.'-'.$wp_term->term_id] = $wp_term->name;
+            }
           }
         ?>
 
         <table class="form-table">
-        <?php if (!empty($wp_categories_select)) { ?>
+        <?php if (!empty($wp_terms_select)) { ?>
           <!-- IDS Categories mappings (countries, regions, themes) -->
           <?php foreach ($ids_datasets as $dataset) { ?>
             <tr valign="top" class="ids-categories-mapping ids-mappings-<?php echo $dataset; ?>">
@@ -810,29 +813,39 @@ function idsimport_render_form() {
             </tr>
             <?php foreach ($ids_categories as $category) { 
               $field_id_source = $dataset . '_' . $category . '_source';
-              $field_id_target = $dataset . '_' . $category . '_target';
               $field_id_mappings = $dataset . '_' . $category . '_mappings';
               $option_name_mappings = $dataset . '_' . $category . '_mappings';
               $category_name = ucfirst($category);
+              $reg_expr_datasets = '/(' . implode('|', $ids_datasets) . ')/';
               ?>
               <tr valign="top" class="ids-categories-mapping ids-mappings-section ids-mappings-<?php echo $dataset; ?>">
               <th scope="row"><?php _e($category_name); ?></th>
-                <td class="ids-categories-container">
+                <td class="ids-categories-container" style="vertical-align: top;">
                   <select class="ids-mapping-select" id='<?php echo $field_id_source; ?>' multiple='multiple' size='5'></select>
                     <p class="description"><a href="javascript:selectAll('<?php echo $field_id_source; ?>');"><?php _e('Select all'); ?></a> / <a href="javascript:deselectAll('<?php echo $field_id_source; ?>');"><?php _e('Deselect all'); ?></a></p>
                 </td>
-                <td class="ids-categories-container">
-                  <p class="description"><?php _e("Map selected $category to:"); ?></p>
-                  <?php echo ids_select_box($field_id_target, $field_id_target, $wp_categories_select, array(), array('class' => 'ids-mapping-select')); ?>
-                  <br /><br />
-                  <p class="description"><a href="javascript:addMappings('<?php echo $field_id_source; ?>', '<?php echo $field_id_target; ?>', '<?php echo $field_id_mappings; ?>');"><?php _e('Add mapping'); ?> &rarr;</a></p>
+                <td class="ids-categories-container" style="vertical-align: top;">
+                <?php 
+                foreach ($all_taxonomies as $tax_name) {
+                  if (!preg_match($reg_expr_datasets, $tax_name) && isset($wp_terms_select[$tax_name])) {
+                    $taxonomy = get_taxonomy($tax_name);
+                    $field_id_target = $dataset . '_' . $category . '_' . $tax_name . '_target';
+                    ?>
+                    <p class="description"><?php _e('Map selected ' . $category . ' to ' . strtolower($taxonomy->labels->name)); ?></p>
+                    <?php echo ids_select_box($field_id_target, $field_id_target, $wp_terms_select[$tax_name], array(), array('class' => 'ids-mapping-select')); ?>
+                    <br />
+                    <p class="description"><a href="javascript:addMappings('<?php echo $field_id_source; ?>', '<?php echo $field_id_target; ?>', '<?php echo $field_id_mappings; ?>');"><?php _e('Add mapping'); ?> &rarr;</a></p>
+                    <br />
+                  <?php 
+                  }
+                } // foreach WP taxonomy ?> 
                 </td>
-                <td class="ids-categories-container">
+                <td class="ids-categories-container" style="vertical-align: top;">
                   <select class="ids-mapping-select" name='idsimport_options[<?php echo $option_name_mappings; ?>][]' id='<?php echo $field_id_mappings; ?>' multiple='multiple' size='5'></select>
                   <p class="description"> <a href="javascript:removeMappings('<?php echo $field_id_mappings; ?>');">&larr; <?php _e('Remove selected'); ?></a> / <a href="javascript:selectAll('<?php echo $field_id_mappings; ?>');"><?php _e('Select all'); ?></a> / <a href="javascript:deselectAll('<?php echo $field_id_mappings; ?>');"><?php _e('Deselect all'); ?></a></p>
                 </td>
               </tr>
-              <?php } // foreach category ?>
+              <?php } // foreach IDS category ?>
           <?php } // foreach dataset ?>
         <?php } // there are no wordpress categories to map to
         else { ?>
