@@ -248,6 +248,9 @@ class IdsApiObjectAssetDocument extends IdsApiObjectAsset {
   // External URLs. Array of strings. URLs of the full text document. 
   public $urls;
 
+  // Type of document.
+  public $document_type;
+
   // Headline. String. A short version of the title or description of the research document.
   // [Is not being returned by the API?]
   // public $headline;
@@ -292,6 +295,12 @@ class IdsApiObjectAssetDocument extends IdsApiObjectAsset {
     }
     if (isset($object['urls'])) {
       $this->urls = $object['urls'];
+    }
+    if (isset($object['category_sector'])) {
+      $this->document_type = $object['category_sector'];
+    }
+    if (isset($object['document_type'])) {
+      $this->document_type = $object['document_type'];
     }
   }
 
