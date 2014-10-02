@@ -67,15 +67,15 @@ add_filter('request', 'idsimport_filter_imported_tags');
 add_filter('query_vars', 'idsimport_query_vars');
 add_action('pre_get_posts', 'idsimport_include_idsassets_loop');
 add_filter('pre_get_posts', 'idsimport_filter_posts');
-add_filter('post_type_link', 'idsimport_post_link');
 add_filter('get_term', 'idsimport_filter_get_term');
 add_filter('get_terms', 'idsimport_filter_get_terms');
 add_action('delete_term', 'idsimport_delete_term', 10, 3);
-add_action('generate_rewrite_rules', 'idsimport_create_rewrite_rules');
 add_filter('get_previous_post_where', 'idsimport_adjacent_post_where');
 add_filter('get_previous_post_join', 'idsimport_adjacent_post_join');
 add_filter('get_next_post_where', 'idsimport_adjacent_post_where');
 add_filter('get_next_post_join', 'idsimport_adjacent_post_join');
+add_action('generate_rewrite_rules', 'idsimport_create_rewrite_rules');
+add_filter('post_type_link', 'idsimport_post_link');
 
 //--------------------------- Set-up / init functions ----------------------------
 
@@ -97,6 +97,7 @@ function idsimport_init() {
     $ids_importer = new IDS_Importer();
     register_importer('idsimport_importer', __('IDS Importer', 'idsimport-importer'), __('Import posts from the IDS collection (Eldis and Bridge).', 'idsimport-importer'), array ($ids_importer, 'dispatch'));
   }
+  add_rewrite_tag('%ids_site%', '([^&]+)');
   $changed_path_documents = idsimport_changed_path('ids_documents');
   $changed_path_organisations = idsimport_changed_path('ids_organisations');
   if ($changed_path_documents || $changed_path_organisations || ids_check_permalinks_changed('idsimport')) {
@@ -173,35 +174,19 @@ function idsimport_taxonomies_init() {
 
 function idsimport_post_link($url) {
   global $post;
-  global $pagenow;
   $post_type = get_post_type($post);
+  $post_status = get_post_status($post->ID);
   if (idsapi_variable_get('idsimport', 'default_dataset', IDS_IMPORT_DEFAULT_DATASET_ADMIN) == 'all') { // TODO: Generalize.
     $site = get_query_var('ids_site');
   }
-  if (($post_type == 'ids_documents') || ($post_type == 'ids_organisations')) {
-    if (get_option('permalink_structure')) {
-      $new_path = idsapi_variable_get('idsimport', $post_type . '_path', '');
-      if ($site) {
-        if (!$new_path) {
-          $new_path = $post_type;
-        }
-        $new_path .= "/$site";
-      }
-      if ($new_path) { // %post_type% is then used by get_sample_permalink() in post.php so we keep it.
-        if ($pagenow === 'post.php') {
-          $post_type_replacement = 'type-' . rand();
-          $url = str_replace('%'.$post_type.'%', $post_type_replacement, $url);
-          $url = str_replace($post_type, $new_path, $url);
-          $url = str_replace($post_type_replacement, '%'.$post_type.'%', $url);
-        }
-        else {
-          $url = str_replace($post_type, $new_path, $url);
-        }
-      }
+  if ((($post_type == 'ids_documents') || ($post_type == 'ids_organisations')) && ($new_path = idsapi_variable_get('idsimport', $post_type . '_path', ''))) {
+    if ($site) {
+      $new_path .= "/$site";
     }
-    elseif ($site) {
-      $url = add_query_arg('ids_site', $site, $url);
-    }
+    $url = str_replace("/$post_type", "/$new_path", $url);
+  }
+  elseif ($site) {
+    $url = add_query_arg('ids_site', $site, $url);
   }
   return $url;
 }
@@ -244,36 +229,32 @@ function idsimport_rewrite_path($post_type){
   global $wp_rewrite;
   global $ids_datasets;
   $new_path = idsapi_variable_get('idsimport', $post_type . '_path', '');
-  if (!$new_path) {
-    $new_path = $post_type;
-  }
-  if ($permalink_structure = get_option('permalink_structure')) {
+  $permalink_structure = get_option('permalink_structure');
+  if ($new_path && $permalink_structure) {
     $datasets = (idsapi_variable_get('idsimport', 'default_dataset', IDS_IMPORT_DEFAULT_DATASET_ADMIN) == 'all') ? implode('|', $ids_datasets) : '';
     if ($datasets) {
-      add_rewrite_rule("{$new_path}/({$datasets})/?$", "index.php?post_type=$post_type" . '&ids_site=$matches[1]', 'top');
-      add_rewrite_rule("{$new_path}/({$datasets})/{$wp_rewrite->pagination_base}/([0-9]{1,})/?$", "index.php?post_type=$post_type" . '&ids_site=$matches[1]&paged=$matches[2]', 'top');
+      add_rewrite_rule("{$new_path}/({$datasets})/?$", "{$wp_rewrite->index}?post_type=$post_type" . '&ids_site=$matches[1]', 'top');
+      add_rewrite_rule("{$new_path}/({$datasets})/{$wp_rewrite->pagination_base}/([0-9]{1,})/?$", "{$wp_rewrite->index}?post_type=$post_type" . '&ids_site=$matches[1]&paged=$matches[2]', 'top');
     }
-    if ($new_path !== $post_type) {
-      add_rewrite_rule("{$new_path}/?$", "index.php?post_type=$post_type", 'top');
-      add_rewrite_rule("{$new_path}/{$wp_rewrite->pagination_base}/([0-9]{1,})/?$", "index.php?post_type=$post_type" . '&paged=$matches[1]', 'top');
-    }
+    add_rewrite_rule("{$new_path}/?$", "{$wp_rewrite->index}?post_type=$post_type", 'top');
+    add_rewrite_rule("{$new_path}/{$wp_rewrite->pagination_base}/([0-9]{1,})/?$", "{$wp_rewrite->index}?post_type=$post_type" . '&paged=$matches[1]', 'top');
     if ($wp_rewrite->feeds) {
       $feeds = '(' . trim(implode( '|', $wp_rewrite->feeds)) . ')';
       if ($datasets) {
-        add_rewrite_rule("{$new_path}/({$datasets})/feed/$feeds/?$", "index.php?post_type=$post_type" . '&ids_site=$matches[1]&feed=$matches[2]', 'top');
-        add_rewrite_rule("{$new_path}/({$datasets})/$feeds/?$", "index.php?post_type=$post_type" . '&ids_site=$matches[1]&feed=$matches[2]', 'top');
+        add_rewrite_rule("{$new_path}/({$datasets})/{$wp_rewrite->feed_base}/$feeds/?$", "{$wp_rewrite->index}?post_type=$post_type" . '&ids_site=$matches[1]&feed=$matches[2]', 'top');
+        add_rewrite_rule("{$new_path}/({$datasets})/$feeds/?$", "{$wp_rewrite->index}?post_type=$post_type" . '&ids_site=$matches[1]&feed=$matches[2]', 'top');
       }
       if ($new_path !== $post_type) {
-        add_rewrite_rule("{$new_path}/feed/$feeds/?$", "index.php?post_type=$post_type" . '&feed=$matches[1]', 'top');
-        add_rewrite_rule("{$new_path}/$feeds/?$", "index.php?post_type=$post_type" . '&feed=$matches[1]', 'top');
+        add_rewrite_rule("{$new_path}/feed/$feeds/?$", "{$wp_rewrite->index}?post_type=$post_type" . '&feed=$matches[1]', 'top');
+        add_rewrite_rule("{$new_path}/$feeds/?$", "{$wp_rewrite->index}?post_type=$post_type" . '&feed=$matches[1]', 'top');
       }
     }
     // These have to be the last ones.
     if ($datasets) {
-      add_rewrite_rule("{$new_path}/({$datasets})/([a-z0-9\-]+)/?$", "index.php?$post_type=" . '$matches[2]&ids_site=$matches[1]', 'top');
+      add_rewrite_rule("{$new_path}/({$datasets})/([a-z0-9\-]+)/?$", "{$wp_rewrite->index}?$post_type=" . '$matches[2]&ids_site=$matches[1]', 'top');
     }
     if ($new_path !== $post_type) {
-      add_rewrite_rule("{$new_path}/([a-z0-9\-]+)/?$", "index.php?$post_type=" . '$matches[1]', 'top');
+      add_rewrite_rule("{$new_path}/([a-z0-9\-]+)/?$", "{$wp_rewrite->index}?$post_type=" . '$matches[1]', 'top');
     }
   }
 }

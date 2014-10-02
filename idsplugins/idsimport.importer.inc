@@ -160,17 +160,25 @@ class IDS_Importer extends WP_Importer {
             }
             foreach ($assets as $asset) {
               if ($post_ids = idsimport_get_ids_by_meta('post', $object_id_field, $asset->object_id)) { // The post already exists in the dataset.
-                if ($updated_assets !== 'skip') {
-                  $post_id = $post_ids[0]; //TODO: check if both are pending or published.
-                  $old_date_updated = get_post_meta($post_id, 'date_updated', TRUE);
-                  if (!is_numeric($old_date_updated)) {
-                    $old_date_updated = strtotime($old_date_updated);
-                  }
-                  if (strtotime($asset->date_updated) > $old_date_updated) { // the new version is more recent
+                $post_id = $post_ids[0];
+                $post_status = get_post_status($post_id);
+                $old_date_updated = get_post_meta($post_id, 'date_updated', TRUE);
+                if (!is_numeric($old_date_updated)) {
+                  $old_date_updated = strtotime($old_date_updated);
+                }
+                //echo "$post_status\n";
+                //echo strtotime($asset->date_updated) ."\n";
+                //echo "$old_date_updated\n";
+                if ($post_status == 'pending' || $post_status == 'published') {
+                  if ((strtotime($asset->date_updated) > $old_date_updated)) { // the new version is more recent
                     switch ($updated_assets) {
                       case 'overwrite':                 
                         $post_id = idsimport_update_asset($post_id, $dataset, $post_type, $asset);
                         if ($post_id) {
+                          if (is_admin() && IDS_IMPORT_VERBOSE_IMPORT) {
+                            $output = $asset->title . ' - ' . __('updated');
+                            echo ids_div_field_wrapper('ids-item-output-importer', '', '', $output);
+                          }
                           $this->terms[$dataset][$type]['updated']++;
                         }
                         else {
@@ -195,9 +203,16 @@ class IDS_Importer extends WP_Importer {
                           $this->terms[$dataset][$type]['skipped']++;
                         }
                         break;
+                      case 'skip':
+                        if (is_admin() && IDS_IMPORT_VERBOSE_IMPORT) {
+                          $output = $asset->title . ' - ' . __('skipped (most recent version already imported)');
+                          echo ids_div_field_wrapper('ids-item-output-importer', '', '', $output);
+                        }
+                        $this->terms[$dataset][$type]['skipped']++;
+                        break;
                     }
                   }
-                  else {
+                  else { // The version being imported is not more recent and it's currently published or pending. we always skip it in this case.
                     if (is_admin() && IDS_IMPORT_VERBOSE_IMPORT) {
                       $output = $asset->title . ' - ' . __('skipped (most recent version already imported)');
                       echo ids_div_field_wrapper('ids-item-output-importer', '', '', $output);
@@ -205,12 +220,18 @@ class IDS_Importer extends WP_Importer {
                     $this->terms[$dataset][$type]['skipped']++;
                   }
                 }
-                else {
-                  if (is_admin() && IDS_IMPORT_VERBOSE_IMPORT) {
-                    $output = $asset->title . ' - ' . __('skipped');
-                    echo ids_div_field_wrapper('ids-item-output-importer', '', '', $output);
+                else { // The existing version is not published or pending - we update it.
+                  $post_id = idsimport_update_asset($post_id, $dataset, $post_type, $asset);
+                  if ($post_id) {
+                    if (is_admin() && IDS_IMPORT_VERBOSE_IMPORT) {
+                      $output = $asset->title . ' - ' . __('updated');
+                      echo ids_div_field_wrapper('ids-item-output-importer', '', '', $output);
+                    }
+                    $this->terms[$dataset][$type]['updated']++;
                   }
-                  $this->terms[$dataset][$type]['skipped']++;
+                  else {
+                    idsapi_register_error('idsimport', __('The post could not be updated for ') . $asset->object_id, 'IDS_Importer::import_assets', 'warning');
+                  }
                 }
               }
               else { // The asset does not exist in the dataset. Create it.
@@ -525,7 +546,9 @@ function idsimport_insert_asset($dataset, $post_type, $asset, $duplicated = FALS
       if (isset($asset->publication_date)) { add_post_meta($post_id, 'publication_date', $asset->publication_date, TRUE); }
       if (isset($asset->publication_year)) { add_post_meta($post_id, 'publication_year', $asset->publication_year, TRUE); }
       if (isset($asset->licence_type)) { add_post_meta($post_id, 'licence_type', $asset->licence_type, TRUE); }
-      if (isset($asset->publisher_array)) { idsimport_add_post_array_meta($post_id, 'publisher_array', $asset->publisher_array, TRUE); }
+      if (isset($asset->publisher)) { add_post_meta($post_id, 'publisher', $asset->publisher, TRUE); }
+      if (isset($asset->publisher_country)) { add_post_meta($post_id, 'publisher_country', $asset->publisher_country, TRUE); }
+      if (isset($asset->document_type)) { add_post_meta($post_id, 'document_type', $asset->document_type, TRUE); }
       if (isset($asset->urls)) { idsimport_add_post_array_meta($post_id, 'urls', $asset->urls); }
       foreach ($import_additional_languages as $lang_code) {
         foreach (array('title', 'description') as $field) { // Iterate through the translatable fields. This could be generalised.
@@ -559,6 +582,7 @@ function idsimport_update_asset($post_id, $dataset, $post_type, $asset) {
   $idsimport_import_user_id = idsapi_variable_get('idsimport', 'import_user_id', '0');
   $ids_api_key = idsapi_variable_get('idsimport', 'api_key', '');
   $idsimport_pub_date = idsapi_variable_get('idsimport', 'pub_date', 'default');
+  //$display_sites = idsimport_display_datasets('public');
   $countries_taxonomy = $dataset . '_countries';
   $regions_taxonomy = $dataset . '_regions';
   $themes_taxonomy = $dataset . '_themes';
@@ -570,6 +594,14 @@ function idsimport_update_asset($post_id, $dataset, $post_type, $asset) {
   $description = ids_get_translation($asset, 'description', $default_language);
   $updated_post['post_title'] = $title;
   $updated_post['post_excerpt'] = ids_excerpt_post('idsimport', $description);
+/*
+  if (in_array($dataset, $display_sites)) {
+    $post['post_status'] = 'publish';
+  }
+  else {
+    $post['post_status'] = 'pending';
+  }
+*/
   $updated_post['post_content'] = $description;
   if ($idsimport_import_user_id) {
     $updated_post['post_author'] = $idsimport_import_user_id;
@@ -615,7 +647,8 @@ function idsimport_update_asset($post_id, $dataset, $post_type, $asset) {
       if (isset($asset->publication_year)) { update_post_meta($post_id, 'publication_year', $asset->publication_year); }
       if (isset($asset->licence_type)) { update_post_meta($post_id, 'licence_type', $asset->licence_type); }
       if (isset($asset->publisher)) { update_post_meta($post_id, 'publisher', $asset->publisher); }
-      if (isset($asset->publisher_country)) { update_post_meta($post_id, 'publisher_country', $asset->licence_type); }
+      if (isset($asset->publisher_country)) { update_post_meta($post_id, 'publisher_country', $asset->publisher_country); }
+      if (isset($asset->document_type)) { update_post_meta($post_id, 'document_type', $asset->document_type); }
       if (isset($asset->urls)) { idsimport_update_post_array_meta($post_id, 'urls', $asset->urls); }
       foreach ($import_additional_languages as $lang_code) {
         foreach (array('title', 'description') as $field) { // Iterate through the translatable fields. This could be generalised.
