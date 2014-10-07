@@ -37,17 +37,8 @@ function idsexpose_value_post($value, $field, $post_type) {
 		case 'post_author':
       $value = get_the_author();
       break;
-		case 'guid':
-      $value = get_permalink();
-      break;
 		case 'post_content':
       $value = get_the_content_feed('rss2');
-      break;
-		case 'post_date':
-      $value = mysql2date('Y-m-d', get_post_time('Y-m-d H:i', true), true);
-      break;
-		case 'post_modified':
-      $value = the_modified_date('c');
       break;
 		case '_edit_lock':
 		case '_edit_last':
