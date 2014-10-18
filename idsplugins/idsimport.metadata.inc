@@ -109,11 +109,11 @@ function idsimport_update_term_meta($term_id, $meta_key, $meta_value, $prev_valu
   See the filter and action hooks in idsimport_taxonomies_init function in idsimport.php
 */
 
-// Add columns with number of documents/organisations linked to the custom taxonomy. The default 'Posts' column is disabled.
+// Add columns with number of documents/organisations linked to the custom taxonomy.
 function idsimport_edit_categories_header($columns) {
-    unset($columns['posts']);
-    $columns['ids_documents'] = 'Documents';
-    $columns['ids_organisations'] = 'Organisations';
+    //unset($columns['posts']);
+    $columns['ids_documents'] = 'IDS Documents';
+    $columns['ids_organisations'] = 'IDS Organisations';
     return $columns;
 }
 

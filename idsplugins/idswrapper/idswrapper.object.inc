@@ -248,7 +248,7 @@ class IdsApiObjectAssetDocument extends IdsApiObjectAsset {
   // External URLs. Array of strings. URLs of the full text document. 
   public $urls;
 
-  // Type of document.
+  // Type of document. Array of strings.
   public $document_type;
 
   // Headline. String. A short version of the title or description of the research document.
@@ -575,36 +575,44 @@ class IdsApiCount {
 
 function build_array_categories($array_categories) {
   $categories = array();
-  foreach (current($array_categories) as $category) {
-    $categories[] = new IdsApiObjectCategory($category);
+  if (is_array($array_categories)) {
+    foreach (current($array_categories) as $category) {
+      $categories[] = new IdsApiObjectCategory($category);
+    }
   }
   return $categories;
 }
 
 function build_array_countries($array_countries) {
   $countries = array();
-  foreach (current($array_countries) as $country) {
-    $countries[] = new IdsApiObjectCountry($country);
+  if (is_array($array_countries)) {
+    foreach (current($array_countries) as $country) {
+      $countries[] = new IdsApiObjectCountry($country);
+    }
   }
   return $countries;
 }
 
 function build_array_organisations($array_organisations) {
   $organisations = array();
-  foreach (current($array_organisations) as $organisation) {
-    $organisations[] = new IdsApiObjectAssetOrganisation($organisation);
+  if (is_array($array_organisations)) {
+    foreach (current($array_organisations) as $organisation) {
+      $organisations[] = new IdsApiObjectAssetOrganisation($organisation);
+    }
   }
   return $organisations;
 }
 
 function build_array_languages($language_array) {
   $languages = array();
-  foreach (current($language_array) as $language) {
-    if (isset($language['isocode'])) {
-      $languages[$language['isocode']] = array();
-      foreach ($language as $field => $value) {
-        $languages[$language['isocode']][$field] = $value;
-      }      
+  if (is_array($language_array)) {
+    foreach (current($language_array) as $language) {
+      if (isset($language['isocode'])) {
+        $languages[$language['isocode']] = array();
+        foreach ($language as $field => $value) {
+          $languages[$language['isocode']][$field] = $value;
+        }      
+      }
     }
   }
   return $languages;

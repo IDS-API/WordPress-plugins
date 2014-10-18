@@ -172,7 +172,6 @@ function idsimport_importer_form() {
   $idsapi = new IdsApiWrapper;
   global $ids_datasets;
   global $ids_categories;
-
   $idsimport_new_categories = idsapi_variable_get('idsimport', 'import_new_categories', IDS_IMPORT_NEW_CATEGORIES);
   $idsimport_map_categories = idsapi_variable_get('idsimport', 'import_map_categories', IDS_IMPORT_MAP_CATEGORIES);
   $default_dataset = idsapi_variable_get('idsimport', 'default_dataset', IDS_IMPORT_DEFAULT_DATASET_ADMIN);
@@ -309,9 +308,9 @@ function idsimport_importer_form() {
 
 // Render the plugin's main admin form.
 function idsimport_render_form() {
+  global $ids_assets;
   global $ids_datasets;
   global $ids_categories;
-
   $idsimport_api_key_validated = idsapi_variable_get('idsimport', 'api_key_validated', FALSE);
 	?>
   <div class="wrap">
@@ -478,6 +477,54 @@ function idsimport_render_form() {
             </p>
           </td>
         </tr>
+
+        <!-- Document types -->
+        <?php
+        $existing_taxonomies = get_taxonomies(array('public' => TRUE, 'show_ui' => TRUE), 'objects');
+        $select_existing_taxonomies = array();
+        foreach ($existing_taxonomies as $tax_obj) {
+          $select_existing_taxonomies[$tax_obj->name] = $tax_obj->labels->name;
+        }
+        foreach ($ids_datasets as $dataset) { 
+          $dataset_name = ucfirst($dataset); ?>
+          <tr valign="top" class="ids-categories-<?php echo $dataset; ?>">
+            <th scope="row"><?php echo $dataset_name . __(' document types'); ?></th>
+            <td id="radio_document_type_<?php echo $dataset; ?>">
+              <label><input name="idsimport_options[import_document_type_<?php echo $dataset; ?>]" type="radio" value="field" <?php checked('field', idsapi_variable_get('idsimport', 'import_document_type_' . $dataset, 'field')); ?> onchange="changeDocumentType();" /> Import as a field</label> <br />
+              <label><input name="idsimport_options[import_document_type_<?php echo $dataset; ?>]" type="radio" value="existing_taxonomy" <?php checked('existing_taxonomy', idsapi_variable_get('idsimport', 'import_document_type_' . $dataset, 'field')); ?> onchange="changeDocumentType();" /> Add to an existing taxonomy</label><br />
+              <label><input name="idsimport_options[import_document_type_<?php echo $dataset; ?>]" type="radio" value="new_taxonomy" <?php checked('new_taxonomy', idsapi_variable_get('idsimport', 'import_document_type_' . $dataset, 'field')); ?> onchange="changeDocumentType();" /> Add to a new taxonomy</label><br />
+              <p class="description">
+                <?php echo __('Please indicate how would you like to process "document types" information in ') . $dataset_name . __(' records.'); ?><br />
+                <?php _e('If document types are imported as taxonomy terms, mappings can be created for them in the "Category settings" section.'); ?>
+              </p>
+            </td>
+          </tr>
+          <!-- Document types: existing taxonomy -->       
+          <tr class="ids-categories-<?php echo $dataset; ?> document-type-taxonomy-<?php echo $dataset; ?> document-type-existing-taxonomy-<?php echo $dataset; ?>">
+            <th scope="row"></th>
+            <td>
+              <?php echo ids_select_box('idsimport_options[import_document_type_taxonomy_'.$dataset.']', 'document_type_existing_taxonomy_'.$dataset, $select_existing_taxonomies, array(idsapi_variable_get('idsimport', 'import_document_type_taxonomy_'.$dataset, ''))); ?>
+              <p class="description">
+                <?php _e('Taxonomy to add "document type" terms to.'); ?>
+              </p>
+            </td>
+          </tr>
+          <!-- Document types: new taxonomy -->
+          <tr class="ids-categories-<?php echo $dataset; ?> document-type-taxonomy-<?php echo $dataset; ?> document-type-new-taxonomy-<?php echo $dataset; ?>">
+            <th scope="row"></th>
+            <td>
+              <input id="document_type_taxonomy_label_singular_<?php echo $dataset; ?>" type="text" size="30" name="idsimport_options[import_document_type_taxonomy_label_singular_<?php echo $dataset; ?>]" value="<?php echo idsapi_variable_get('idsimport', 'import_document_type_taxonomy_label_singular_'.$dataset, $dataset_name . ' document type'); ?>"/>
+              <p class="description">
+                <?php _e('New taxonomy label (singular).'); ?>
+              </p>
+              <br/>
+              <input id="document_type_taxonomy_label_plural_<?php echo $dataset; ?>" type="text" size="30" name="idsimport_options[import_document_type_taxonomy_label_plural_<?php echo $dataset; ?>]" value="<?php echo idsapi_variable_get('idsimport', 'import_document_type_taxonomy_label_plural_'.$dataset, $dataset_name . ' document types'); ?>"/>
+              <p class="description">
+                <?php _e('New taxonomy label (plural).'); ?>
+              </p>
+            </td>
+          </tr>
+        <?php } // foreach ?>
 
         <!-- Number of assets to retrieve -->
         <tr>
@@ -1011,45 +1058,64 @@ function idsimport_edit_post_form() {
 // Functions to list IDS imported categories.
 
 function idsimport_eldis_countries_page() {
-  idsimport_categories_page('eldis', 'countries');
+  idsimport_ids_categories_page('eldis', 'countries');
 }
 
 function idsimport_eldis_regions_page() {
-  idsimport_categories_page('eldis', 'regions');
+  idsimport_ids_categories_page('eldis', 'regions');
 }
 
 function idsimport_eldis_themes_page() {
-  idsimport_categories_page('eldis', 'themes');
+  idsimport_ids_categories_page('eldis', 'themes');
 }
 
 function idsimport_bridge_countries_page() {
-  idsimport_categories_page('bridge', 'countries');
+  idsimport_ids_categories_page('bridge', 'countries');
 }
 
 function idsimport_bridge_regions_page() {
-  idsimport_categories_page('bridge', 'regions');
+  idsimport_ids_categories_page('bridge', 'regions');
 }
 
 function idsimport_bridge_themes_page() {
-  idsimport_categories_page('bridge', 'themes');
+  idsimport_ids_categories_page('bridge', 'themes');
 }
 
-function idsimport_categories_page($dataset, $category) {
+function idsimport_eldis_document_type_page() {
+  idsimport_document_type_page('eldis');
+}
+
+function idsimport_bridge_document_type_page() {
+  idsimport_document_type_page('bridge');
+}
+
+function idsimport_document_type_page($dataset) {
+  $taxonomy_name = idsapi_variable_get('idsimport', 'import_document_type_taxonomy_'.$dataset, $dataset.'_document_type');
+  $taxonomy_singular_label = idsapi_variable_get('idsimport', 'import_document_type_taxonomy_label_singular_'.$dataset, ucfirst($dataset). ' document type');
+  idsimport_taxonomy_page($taxonomy_name, $taxonomy_singular_label);  
+}
+
+function idsimport_ids_categories_page($dataset, $category) {
+  $taxonomy_name = $dataset . '_' . $category;
+  $taxonomy_singular_label = ucfirst($dataset) . ' ' . ucfirst($category);
+  idsimport_taxonomy_page($taxonomy_name, $taxonomy_singular_label);
+}
+
+function idsimport_taxonomy_page($taxonomy_name, $taxonomy_singular_label) {
 ?>
   <div class="wrap">
   <div id="icon-edit-pages" class="icon32 icon32-posts-page"><br /></div>
-  <h2><?php echo ucfirst($dataset) . ' ' . ucfirst($category); ?> <a href="edit-tags.php?taxonomy=<?php echo $dataset . '_' . $category; ?>" class="add-new-h2">Add/Edit/Delete <?php echo ucfirst($dataset) . ' ' . ucfirst($category); ?></a> </h2>
+  <h2><?php echo $taxonomy_singular_label; ?> <a href="edit-tags.php?taxonomy=<?php echo $taxonomy_name; ?>" class="add-new-h2">Add/Edit/Delete <?php echo $taxonomy_singular_label; ?></a> </h2>
   <br/><br/>
   <ul class="ids-category-list">
   <?php
-  $taxonomy_name = $dataset . '_' . $category;
   $args = array(
     'hide_empty'         => FALSE,
     'orderby'            => 'name',
     'order'              => 'ASC',
     'hierarchical'       => true,
     'title_li'           => '',
-    'show_option_none'   => __("No $category found"),
+    'show_option_none'   => __("No '$taxonomy_singular_label' found"),
     'taxonomy'           => $taxonomy_name,
   );
   wp_list_categories($args);
@@ -1065,37 +1131,29 @@ function idsimport_help_page() {
   <div class="wrap">
   <div id="icon-edit-comments" class="icon32 icon32-posts-page"><br /></div>
   <h2><?php _e('Help'); ?></h2>
-
   <p>
   <?php _e('The IDS KS API plugin allows access to IDS Knowledge Services content of thematically organised and hand selected academic research on poverty reduction in the developing world that is freely available to access online.'); ?>
   </p>
-  
   <p>
   <?php _e('IDS Knowledge Services offer two collections that can be accessed via this plugin. They are:'); ?>
   </p>
-  
   <p>
   <?php _e('BRIDGE is a research and information service supporting gender advocacy and mainstreaming efforts by bridging the gaps between theory, policy and practice. BRIDGE acts as a catalyst by facilitating the generation and exchange of relevant, accessible and diverse gender information in print, online and through other innovative forms of communication. BRIDGE hosts a global resources library on its website, which includes gender-focused information materials in a number of languages, including Arabic, Chinese, English, French, Portuguese and Spanish.'); ?>
   </p>
-  
   <p>
   <?php _e('Eldis is an online information service covering development research on a wide change of thematic areas including agriculture, climate change, conflict, gender, governance, and health. Eldis includes over 32,000 summaries and links to free full-text research and policy documents from over 8,000 publishers.  Each document is editorially selected by members of our team.'); ?>
   </p>
-  
   <b><?php _e('What content can I get?'); ?></b>
-  
   <p>
   <b><?php _e('Documents'); ?></b> <?php _e('are a wide range of online resources, primarily academic research, on development issues that are freely available online.'); ?>
   <br>
   <?php _e('They are editorially selected, organised thematically and are summarised, in clear, non-technical language for easy consumption.'); ?>
   </p>
-  
   <p>
   <b><?php _e('Organisations'); ?></b> <?php _e('are a wide range of organisations engaged in reducing poverty. Most of the organisations in our datasets have published documents available in the data.'); ?>
   <br>
   <?php _e('Please note: currently there are no organisations in the BRIDGE dataset. Organisational websites are recorded as "documents".'); ?>
-  </p>
-  
+  </p>  
   <p>
   <b><?php _e('Countries'); ?></b> <?php _e('are used to identify either:'); ?>
   <ul class="ids-category-list">
@@ -1104,73 +1162,54 @@ function idsimport_help_page() {
   <li class="cat-item"> <?php _e('the countries in which an organisation works'); ?>
   </ul>
   </p>
-  
   <p>
   <b><?php _e('Regions'); ?></b> <?php _e('are broad geographic groupings, which enable users to explore our documents and organisations by more than one country.'); ?>
   </p>
-
   <p>
   <b><?php _e('Themes'); ?></b> <?php _e('are development topics which reflect the key themes in development.'); ?>
   </p>
-  
   <b><?php _e('How do I use the plugin?'); ?></b>
-  
   <p>
   <?php _e('To use the plugin, you must obtain a unique Token-GUID or key for the API. Please register for your API key <a href="http://api.ids.ac.uk/accounts/register/" target="_new">here</a>. Once obtained, enter this key into the IDS API Token-GUID (key) section of the IDS Plugin Settings.'); ?>
   </p>
-  
   <p>
   <?php _e('The IDS API package actually has two plugins on offer, both allow the administrator to select content from'); ?> <a href="http://www.eldis.org/" target="_new">Eldis</a>, <a href="http://www.bridge.ids.ac.uk/" target="_new">BRIDGE</a> <?php _e('or both collections, and bring relevant content easily into the site.'); ?>
   </p>
-  
   <b><?php _e('IDS Import plugin'); ?></b>
-  
   <p>
   <?php _e('This plugin enables the one time or periodic importing of content into the Wordpress database. IDS documents and organisations are imported as custom Wordpress content types, while IDS regions, countries and themes are imported as Wordpress custom taxonomies. Content and terms can also be imported manually.'); ?>
   </p>
-  
   <p>
   <?php _e('You can select the number of items to import and assign to a specific Wordpress user. You can filter the content you import by country, region or theme. It is also possible the filter by publisher or author name.  You can integrate content seamlessly into your existing content structures by mapping Eldis or BRIDGE taxonomies to existing Wordpress taxonomies.'); ?>
   </p>
-  
   <p>
   <?php _e('So, if you were the administrator of a website that highlighted recent research on ICTs and Gender in Kenya, you would be able to select specific criteria to suit your content. You would select the themes ICT and Gender, as well as the country Kenya.'); ?>
   </p>
-  
   <b><?php _e('Tips for searching'); ?></b>
-  
   <p>
   <?php _e('Although the Eldis and BRIDGE datasets are very wide ranging, very specific search terms may not return the number of results that you expect or want. Therefore, if you are not getting the results you expect, it might be worth trying more generic search terms or even simply searching at the Theme level.'); ?>
   </p>
-  
   <p>
   <?php _e('Please note: You can add multiple selections for the Theme and Country fields. The search then looks for results that contain either Theme or Country.'); ?>
   </p>
-  
   <p>
   <?php _e('e.g. A multiple selection of "India" and "Bangladesh" would show any results for:'); ?>
   </p>
-  
   <p>
   <?php _e('either "India" OR "Bangladesh"'); ?>
   </p>
-  
   <p>
   <?php _e('All other fields are combined in the search, so only results that contain ALL fields are returned.'); ?>
   </p>
-  
   <p>
   <?php _e('e.g. A selection of "World Bank" as the publisher, "2010" as the year of publication, and a multiple selection of "India" and "Bangladesh" would show any results for:'); ?>
   </p>
-  
   <p>
   <?php _e('World Bank AND 2010 AND (India OR Bangladesh)'); ?>
   </p>
-  
   <p>
   <?php _e('For terms and condition for using API see'); ?> <a href="http://api.ids.ac.uk/about/terms/" target="_new"><?php _e('here'); ?></a>.
   </p>
-
   </div>
 <?php
 }
@@ -1203,5 +1242,4 @@ function idsimport_sched_sort($sched1, $sched2) {
   }
   return ($sched1['interval'] < $sched2['interval']) ? -1 : 1;
 }
-
 

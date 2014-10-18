@@ -107,15 +107,12 @@ function idsimport_validate_options($input) {
   $error = FALSE;
   $error_message = '';
   $idsimport_api_key_validated = idsapi_variable_get('idsimport', 'api_key_validated', FALSE);
-  $idsimport_default_dataset = idsapi_variable_get('idsimport', 'default_dataset', IDS_IMPORT_DEFAULT_DATASET_ADMIN);
   $reg_api_key = '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/';
   $reg_api_url = '/^http:\/\/[\/0-9a-z\.]+$/';
   $reg_path = '/^\/?([\w\-]+\/?)*\/?$/';
   $allowed_html = array();
-
   $current_permalinks = get_option('permalink_structure');
   $input['permalink_structure'] = idsapi_variable_get('idsimport', 'permalink_structure', $current_permalinks);
-
   if ((isset($input['api_key'])) && preg_match($reg_api_key, $input['api_key'])) {
     if ($idsapi->validateKey($input['api_key'])) {
         $input['api_key_validated'] = TRUE;
@@ -169,6 +166,39 @@ function idsimport_validate_options($input) {
     }
     if (isset($input['import_user'])) {
       $input['import_user'] =  sanitize_user($input['import_user'], TRUE);
+    }
+    foreach ($ids_datasets as $dataset) {
+      if (($input['default_dataset'] != 'all') && ($input['default_dataset'] != $dataset)) {
+        $input['import_document_type_'.$dataset] = 'field';
+        $input['import_document_type_taxonomy_label_singular_'.$dataset] = '';
+        $input['import_document_type_taxonomy_label_plural_'.$dataset] = '';
+      }
+      else {
+        if ($input['import_document_type_'.$dataset] == 'new_taxonomy') {
+          if (isset($input['import_document_type_taxonomy_label_singular_'.$dataset]) && isset($input['import_document_type_taxonomy_label_plural_'.$dataset]) && preg_match('/^\w[\w ]+\w$/', $input['import_document_type_taxonomy_label_singular_'.$dataset]) && preg_match('/^\w[\w ]+\w$/', $input['import_document_type_taxonomy_label_plural_'.$dataset])) {
+            // We don't change the existing taxonomy internal name.
+            if ($current_taxonomy_name = idsapi_variable_get('idsimport', 'import_document_type_taxonomy_'.$dataset, '')) {
+              $input['import_document_type_taxonomy_'.$dataset] = $current_taxonomy_name;
+            }
+            else {
+              $input['import_document_type_taxonomy_'.$dataset] = str_replace('-', '_', sanitize_title($input['import_document_type_taxonomy_label_singular_'.$dataset]));
+              if (($current_taxonomy != $input['import_document_type_taxonomy_'.$dataset]) && taxonomy_exists($input['import_document_type_taxonomy_'.$dataset])) {
+                $error = TRUE;
+                $error_message .= __(' Invalid taxonomy name for ') . ucfirst($dataset) . __(' document types.');
+                $error_message .= __('There already is a taxonomy with that name. Please choose another name or select the existing taxonomy.');
+                $input['import_document_type_taxonomy_label_singular_'.$dataset] = '';
+                $input['import_document_type_taxonomy_label_plural_'.$dataset] = '';
+              }
+            }
+          }
+          else {
+            $error = TRUE;
+            $error_message .= __(' Invalid taxonomy label for ') . ucfirst($dataset) . __(' document types.');
+            $input['import_document_type_taxonomy_label_singular_'.$dataset] = '';
+            $input['import_document_type_taxonomy_label_plural_'.$dataset] = '';
+          }
+        }
+      }
     }
     $warning_paths = '';
     foreach (array('documents', 'organisations') as $asset_type) {

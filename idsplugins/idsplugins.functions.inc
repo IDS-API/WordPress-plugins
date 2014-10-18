@@ -15,11 +15,14 @@ function ids_check_permalinks_changed($plugin) {
   }
 }
 
+// Return available languages.
 function ids_languages($all = FALSE) {
   $languages = array(
                 'ar' => __('Arabic'),
                 'en' => __('English'),
+                'nl' => __('Dutch'),
                 'fr' => __('French'),
+                'it' => __('Italian'),
                 'pt' => __('Portuguese'),
                 'es' => __('Spanish'),
               );

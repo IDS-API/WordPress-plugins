@@ -15,7 +15,7 @@ if ( !class_exists( 'WP_Importer' ) ) {
 if ( class_exists( 'WP_Importer' ) ) {
 class IDS_Importer extends WP_Importer {
 
-// Posts and taxonomy terms created/updated
+  // Posts and taxonomy terms created/updated
   var $terms = array('eldis' => array(), 'bridge' => array());
 
 //--------------------------- User interface methods -----------------------------
@@ -71,6 +71,7 @@ class IDS_Importer extends WP_Importer {
     }
   }
 
+  // Display a summary of the importing process.
   function display_results() {
     $total = 0;
     foreach ($this->terms as $dataset => $results_dataset) {
@@ -166,10 +167,7 @@ class IDS_Importer extends WP_Importer {
                 if (!is_numeric($old_date_updated)) {
                   $old_date_updated = strtotime($old_date_updated);
                 }
-                //echo "$post_status\n";
-                //echo strtotime($asset->date_updated) ."\n";
-                //echo "$old_date_updated\n";
-                if ($post_status == 'pending' || $post_status == 'published') {
+                if ($post_status == 'pending' || $post_status == 'publish') {
                   if ((strtotime($asset->date_updated) > $old_date_updated)) { // the new version is more recent
                     switch ($updated_assets) {
                       case 'overwrite':                 
@@ -224,7 +222,7 @@ class IDS_Importer extends WP_Importer {
                   $post_id = idsimport_update_asset($post_id, $dataset, $post_type, $asset);
                   if ($post_id) {
                     if (is_admin() && IDS_IMPORT_VERBOSE_IMPORT) {
-                      $output = $asset->title . ' - ' . __('updated');
+                      $output = $asset->title . ' - ' . $post_status . __(' updated');
                       echo ids_div_field_wrapper('ids-item-output-importer', '', '', $output);
                     }
                     $this->terms[$dataset][$type]['updated']++;
@@ -277,10 +275,8 @@ class IDS_Importer extends WP_Importer {
               if ((isset($category->level)) && ($category->level > 1) && (isset($category->parent_object_id))) {
                 if ($term_id_parent = idsimport_get_id_by_meta(IDS_IMPORT_TAXONOMY, $object_id_field, $category->parent_object_id)) { // The parent is a WP term.
                   $term_args['parent'] = $term_id_parent;
-                  // $term = term_exists($category_name, $taxonomy_name, $term_id_parent);
                 }
                 else { // It has a parent, but the parent term has not been created in the dataset yet.
-                  // $term = term_exists($category_name, $taxonomy_name);
                   $update_parent = TRUE;
                 }
               }
@@ -474,6 +470,7 @@ function idsimport_insert_asset($dataset, $post_type, $asset, $duplicated = FALS
   $idsimport_import_user_id = idsapi_variable_get('idsimport', 'import_user_id', '0');
   $ids_api_key = idsapi_variable_get('idsimport', 'api_key', '');
   $idsimport_pub_date = idsapi_variable_get('idsimport', 'pub_date', 'default');
+  $idsimport_import_document_type = idsapi_variable_get('idsimport', 'import_document_type_'.$dataset, 'field');
   $display_sites = idsimport_display_datasets('public');
   $countries_taxonomy = $dataset . '_countries';
   $regions_taxonomy = $dataset . '_regions';
@@ -559,6 +556,14 @@ function idsimport_insert_asset($dataset, $post_type, $asset, $duplicated = FALS
           }
         }
       }
+      if (isset($asset->document_type)) {
+        if ($idsimport_import_document_type == 'field') {
+          idsimport_add_post_array_meta($post_id, 'document_type', $asset->document_type);
+        }
+        else {
+          idsimport_update_document_types_post($post_id, $dataset, $asset->document_type);
+        }
+      }
     }
     elseif ($post_type == 'ids_organisations') {
     // Organisation-specific fields.
@@ -582,7 +587,7 @@ function idsimport_update_asset($post_id, $dataset, $post_type, $asset) {
   $idsimport_import_user_id = idsapi_variable_get('idsimport', 'import_user_id', '0');
   $ids_api_key = idsapi_variable_get('idsimport', 'api_key', '');
   $idsimport_pub_date = idsapi_variable_get('idsimport', 'pub_date', 'default');
-  //$display_sites = idsimport_display_datasets('public');
+  $idsimport_import_document_type = idsapi_variable_get('idsimport', 'import_document_type_'.$dataset, 'field');
   $countries_taxonomy = $dataset . '_countries';
   $regions_taxonomy = $dataset . '_regions';
   $themes_taxonomy = $dataset . '_themes';
@@ -594,14 +599,6 @@ function idsimport_update_asset($post_id, $dataset, $post_type, $asset) {
   $description = ids_get_translation($asset, 'description', $default_language);
   $updated_post['post_title'] = $title;
   $updated_post['post_excerpt'] = ids_excerpt_post('idsimport', $description);
-/*
-  if (in_array($dataset, $display_sites)) {
-    $post['post_status'] = 'publish';
-  }
-  else {
-    $post['post_status'] = 'pending';
-  }
-*/
   $updated_post['post_content'] = $description;
   if ($idsimport_import_user_id) {
     $updated_post['post_author'] = $idsimport_import_user_id;
@@ -613,10 +610,6 @@ function idsimport_update_asset($post_id, $dataset, $post_type, $asset) {
     $updated_post['post_date'] = date_i18n('Y-m-d H:i:s', strtotime($asset->date_updated));
   }
   $new_post_id  = wp_update_post($updated_post);
-  if (is_admin() && IDS_IMPORT_VERBOSE_IMPORT) {
-    $output = $title . ' - ' . __('updated');
-    echo ids_div_field_wrapper('ids-item-output-importer', '', '', $output);
-  }
   if ($new_post_id) {
     update_post_meta($post_id, $object_id_field, $asset->object_id);
     // Extra fields that could not be present in 'short' responses.
@@ -657,6 +650,14 @@ function idsimport_update_asset($post_id, $dataset, $post_type, $asset) {
           if ($field_value) {
             update_post_meta($post_id, $field_name, $field_value);
           }
+        }
+      }
+      if (isset($asset->document_type)) {
+        if ($idsimport_import_document_type == 'field') {
+          idsimport_update_post_array_meta($post_id, 'document_type', $asset->document_type);
+        }
+        else {
+          idsimport_update_document_types_post($post_id, $dataset, $asset->document_type);
         }
       }
     }
@@ -747,7 +748,6 @@ function idsimport_insert_category($dataset, $taxonomy, $category, $term_args) {
   return $term_id;
 }
 
-
 // Update term with imported category.
 // Returns NULL if there was an error when updating.
 // TODO - process categories that are now archived. Delete them?
@@ -793,6 +793,46 @@ function idsimport_update_category($term_id, $dataset, $taxonomy, $category, $te
   return $new_term_id;
 }
 
+// Generic function to retrieve a term id - creating it if it does not exist.
+function idsimport_insert_term($taxonomy_name, $term_label) {
+  $term_id = 0;
+  if ($term = term_exists($term_label, $taxonomy_name)) {
+    $term_id = $term['term_id'];
+  }
+  else {
+    $term = wp_insert_term($term_label, $taxonomy_name);
+    if (!is_wp_error($term)) {
+      $term_id = $term['term_id'];
+    }
+    else {
+      idsapi_register_error('idsimport',  __('Error inserting term ') . $term_label . ': ' . $term->get_error_message(), 'idsimport_insert_term', 'warning');
+    }
+  }
+  return $term_id;
+}
+
+// Adds document types to posts (when document type is a taxonomy - new or existing).
+function idsimport_update_document_types_post($post_id, $dataset, $document_types) {
+  $document_type_taxonomy_name = idsapi_variable_get('idsimport', 'import_document_type_taxonomy_'.$dataset, $dataset.'_document_type');
+  if ($document_type_taxonomy = get_taxonomy($document_type_taxonomy_name)) {
+    if ($document_type_taxonomy->hierarchical) {
+      $terms_ids = array();
+      foreach ($document_types as $document_type) {
+        if ($document_type) {
+          $terms_ids[] = idsimport_insert_term($document_type_taxonomy_name, $document_type);
+        }
+      }
+      if ($terms_ids) {
+        $append = ('existing_taxonomy' == idsapi_variable_get('idsimport', 'import_document_type_'.$dataset, 'field'));
+        wp_set_post_terms($post_id, $terms_ids, $document_type_taxonomy_name, $append);
+      }
+    }
+    else {
+      wp_set_post_terms($post_id, $document_types, $document_type_taxonomy_name, TRUE);
+    }
+  }
+}
+
 // Relate a post with its IDS categories. If the categories do not exist as terms, they are created.
 // TODO. Get the arrays outside of this function. "Clean" previously assigned categories in the 'category' taxonomy in case they changed.
 function idsimport_update_categories_post($post_id, $dataset, $taxonomy, $categories) {
@@ -800,7 +840,7 @@ function idsimport_update_categories_post($post_id, $dataset, $taxonomy, $catego
   $idsimport_map_categories = idsapi_variable_get('idsimport', 'import_map_categories', IDS_IMPORT_MAP_CATEGORIES);
   if ($idsimport_new_categories) {
     // Assign assets to new taxonomy terms corresponding to imported IDS categories.
-    $terms_ids = idsimport_get_terms_ids($dataset, $taxonomy, $categories);
+    $terms_ids = idsimport_get_ids_categories_terms_ids($dataset, $taxonomy, $categories);
     wp_set_post_terms($post_id, $terms_ids, $taxonomy, FALSE);
   }
   if ($idsimport_map_categories) {
@@ -849,33 +889,35 @@ function idsimport_get_mappings($taxonomy_name) {
 function idsimport_update_categories_term($term_id, $dataset, $taxonomy, $categories) {
   $idsimport_new_categories = idsapi_variable_get('idsimport', 'import_new_categories', IDS_IMPORT_NEW_CATEGORIES);
   if ($idsimport_new_categories) {
-    $terms_ids = idsimport_get_terms_ids($dataset, $taxonomy, $categories);
+    $terms_ids = idsimport_get_ids_categories_terms_ids($dataset, $taxonomy, $categories);
     wp_set_post_terms($term_id, $terms_ids, $taxonomy, FALSE);
   }
 }
 
 // Given an array of categories objects, return an array of their corresponding term ids. New terms are created if they don't exist.
-function idsimport_get_terms_ids($dataset, $taxonomy, $categories) {
+function idsimport_get_ids_categories_terms_ids($dataset, $taxonomy, $categories) {
   $terms_ids = array();
   foreach ($categories as $category) {
     $category_name = idsimport_get_category_name($category);
-    $category_name .= " ($category->object_id)";
-    if ($term = term_exists($category_name, $taxonomy)) {
-      if (is_array($term)) {
-        $term_id = $term['term_id'];
+    if ($category_name) {
+      $category_name .= " ($category->object_id)";
+      if ($term = term_exists($category_name, $taxonomy)) {
+        if (is_array($term)) {
+          $term_id = $term['term_id'];
+        }
+        else {
+          $term_id = $term;
+        }
+      }
+      else { // The term does not exist, insert it.
+        $term_id = idsimport_insert_category($dataset, $taxonomy, $category, array('name' => $category_name));
+      }
+      if ($term_id) {
+        $terms_ids[] = $term_id;
       }
       else {
-        $term_id = $term;
+        idsapi_register_error('idsimport',  __('Category not inserted.'), 'idsimport_get_ids_categories_terms_ids', 'warning');
       }
-    }
-    else { // The term does not exist, insert it.
-      $term_id = idsimport_insert_category($dataset, $taxonomy, $category, array('name' => $category_name));
-    }
-    if ($term_id) {
-      $terms_ids[] = $term_id;
-    }
-    else {
-      idsapi_register_error('idsimport',  __('Category not inserted.'), 'idsimport_get_terms_ids', 'warning');
     }
   }
   return $terms_ids;

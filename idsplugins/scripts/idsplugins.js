@@ -105,6 +105,23 @@ function changeDataset() {
       $jqorig('.ids-mappings-' + dataset).hide();
     }
   });
+  changeDocumentType();
+}
+
+function changeDocumentType() {
+  selected_dataset = $jqorig("#radio_dataset input[type='radio']:checked").val();
+  $jqorig.each(['eldis', 'bridge'], function(i, dataset) { 
+    if ((dataset == selected_dataset) || (selected_dataset == 'all')) {
+      $jqorig('.document-type-taxonomy-' + dataset).hide();
+      selected_document_type = $jqorig("#radio_document_type_" + dataset + " input[type='radio']:checked").val();
+      if (selected_document_type == 'existing_taxonomy') {
+        $jqorig('.document-type-existing-taxonomy-' + dataset).show();
+      }
+      else if (selected_document_type == 'new_taxonomy') {
+        $jqorig('.document-type-new-taxonomy-' + dataset).show();
+      }
+    }
+  });
 }
 
 function changeMappingsSettings() {
@@ -361,6 +378,7 @@ function loadAdminPage() {
     else if (ids_plugin == 'idsimport') {
       changeMappingsSettings();
       changeNewCategories();
+      changeDocumentType();
       $jqorig("#ids_import_user_select").change(updateUsername); 
       $jqorig("#ids_import_user").change(updateDefaultUser);
     }

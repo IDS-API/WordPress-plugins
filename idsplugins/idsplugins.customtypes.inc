@@ -52,14 +52,6 @@ function ids_new_post_type($post_type_name, $post_type_label, $singular_name) {
       'rewrite' => array('slug' => $post_type_name)
     );
     $args['taxonomies'] = array( 'post_tag', 'category' );
-    foreach ($ids_datasets as $dataset) {
-      foreach ($ids_categories as $category) {
-        $ids_taxonomy_name = $dataset . '_' . $category;
-        if (taxonomy_exists($ids_taxonomy_name)) {
-          $args['taxonomies'][] = $ids_taxonomy_name;
-        }
-      }
-    }
     register_post_type($post_type_name, $args);
     $wp_rewrite->flush_rules();
   }
