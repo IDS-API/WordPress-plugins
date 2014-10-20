@@ -630,7 +630,7 @@ function idsimport_update_asset($post_id, $dataset, $post_type, $asset) {
       update_post_meta($post_id, 'metadata_url', $metadata_url);
     }
     if (($import_keywords) && (isset($asset->keywords))) {
-      wp_set_post_tags($post_id, $asset->keywords, FALSE);
+      wp_set_post_tags($post_id, $asset->keywords, TRUE);
     }
     if ($post_type == 'ids_documents') {
     // Document-specific fields.
@@ -849,10 +849,22 @@ function idsimport_update_categories_post($post_id, $dataset, $taxonomy, $catego
     $tax_mappings = array();
     foreach ($categories as $category) {
       if (isset($mappings[$category->object_id])) {
-        $mapping = $mappings[$category->object_id];
-        list($wp_taxonomy, $wp_term_id) = explode('-', $mapping);
-        if ($wp_taxonomy && $wp_term_id) {
-          $tax_mappings[$wp_taxonomy][] = $wp_term_id;
+        $mappings_category = $mappings[$category->object_id];
+        foreach ($mappings_category as $mapping) {
+          $wp_term_id = '';
+          $wp_taxonomy = '';
+          if (preg_match('/(.+)\-(.+)$/', $mapping, $matches)) {
+            if (isset($matches[1]) && isset($matches[2])) {
+              $wp_taxonomy = $matches[1];
+              $wp_term_id = $matches[2];
+            }
+          }
+          if ($wp_taxonomy && $wp_term_id && is_numeric($wp_term_id)) {
+            $tax_mappings[$wp_taxonomy][] = $wp_term_id;
+          }
+          elseif (is_numeric($mapping)) { // For backwards compatibility
+            $tax_mappings['category'][] = $mapping;
+          }
         }
       }
     }
@@ -874,12 +886,11 @@ function idsimport_update_categories_post($post_id, $dataset, $taxonomy, $catego
 
 function idsimport_get_mappings($taxonomy_name) {
   $idscats_wpterms = array();
-  $selected_mappings = $taxonomy_name . '_mappings';
-  $mappings = idsapi_variable_get('idsimport', $selected_mappings, array());
+  $mappings = idsapi_variable_get('idsimport', $taxonomy_name . '_mappings', array());
   foreach ($mappings as $mapping) {
     $relation = explode(',', $mapping);
     if (isset($relation[0]) && isset($relation[1])) {
-      $idscats_wpterms[$relation[0]] = $relation[1];
+      $idscats_wpterms[$relation[0]][] = $relation[1];
     }
   }
   return $idscats_wpterms;
