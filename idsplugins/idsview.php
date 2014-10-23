@@ -24,17 +24,27 @@ License: GPLv3
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-if (!defined('IDS_API_LIBRARY_PATH')) define('IDS_API_LIBRARY_PATH', dirname(__FILE__) . '/idswrapper/');
 if (!defined('IDS_API_ENVIRONMENT')) define('IDS_API_ENVIRONMENT', 'wordpress');
 
-require_once('idsview.default.inc');
-require_once(IDS_API_LIBRARY_PATH . 'idswrapper.wrapper.inc');
+if (!defined('IDS_API_LIBRARY_PATH')) define('IDS_API_LIBRARY_PATH', dirname(dirname(__FILE__)) . '/idswrapper/');
+if (file_exists(IDS_API_LIBRARY_PATH) && is_readable(IDS_API_LIBRARY_PATH)) {
+  require_once(IDS_API_LIBRARY_PATH . 'idswrapper.wrapper.inc');
+} else {
+  wp_die(__('IDS View: The IDS API library directory was not found or could not be read.'));
+}
 
-require_once('idsplugins.customtypes.inc');
-require_once('idsplugins.functions.inc');
-require_once('idsplugins.html.inc');
-require_once('idsview.admin.inc');
-require_once('idsview.widget.inc');
+if (!defined('IDS_COMMON_FILES_PATH')) define('IDS_COMMON_FILES_PATH', dirname(dirname(__FILE__)) . '/idsplugins_common/');
+if (file_exists(IDS_COMMON_FILES_PATH) && is_readable(IDS_COMMON_FILES_PATH)) {
+  require_once(IDS_COMMON_FILES_PATH . 'idsplugins.customtypes.inc');
+  require_once(IDS_COMMON_FILES_PATH . 'idsplugins.functions.inc');
+  require_once(IDS_COMMON_FILES_PATH . 'idsplugins.html.inc');
+} else {
+  wp_die(__('IDS View: A directory with shared files IDS plugins files was not found or could not be read.'));
+}
+
+require_once('idsview.includes/idsview.default.inc');
+require_once('idsview.includes/idsview.admin.inc');
+require_once('idsview.includes/idsview.widget.inc');
 
 //-------------------------------- Set-up hooks ---------------------------------
 
@@ -88,6 +98,11 @@ function idsview_activate() {
           if (!is_wp_error($page_id)) {
             update_post_meta($page_id, "_wp_page_template", $page_template);
           }
+          if (!locate_template(array($page_template))) {
+            $error_message = $num . ' - ' . sprintf(__('Template file %s could not be found.'), $page_template);
+            $error_message .= sprintf(__(' See / copy the sample templates in %s.'), $asset_type, IDS_COMMON_FILES_PATH . '/templates/examples');
+            idsapi_register_error('idsview', $error_message, 'idsview_templates_exist', 'warning');
+          }
         }
         elseif (isset($page_exists->ID)) {
           $page_id = $page_exists->ID;
@@ -121,6 +136,25 @@ function idsview_deactivate() {
 function idsview_uninstall() {
 }
 
+// Check if the templates of the 'display pages' can be found or display message.
+function idsview_templates_exist() {
+  global $ids_datasets;
+  global $ids_assets;
+  foreach ($ids_datasets as $dataset) {
+    foreach ($ids_assets as $asset_type) {
+      $exclude = idsapi_exclude($dataset, $asset_type);
+      if (!$exclude) {
+        $page_template = 'idsview_' . $dataset . '_' . $asset_type . '.php';
+        if (!locate_template(array($page_template))) {
+          $error_message = sprintf(__('Template file %s could not be found.'), $page_template);
+          $error_message .= sprintf(__(' See / copy the sample templates in %s.'), IDS_COMMON_FILES_PATH . '/templates/examples');
+          idsapi_register_error('idsview', $error_message, 'idsview_templates_exist', 'warning');
+        }
+      }
+    }
+  }
+}
+
 // Delete idsview_documents / idsview_organisations pages.
 function idsview_delete_assets_pages() {
   global $ids_assets;
@@ -146,8 +180,8 @@ function idsview_admin_init(){
   if(!is_array($options)) { // The options are corrupted.
     idsview_delete_plugin_options();
   }
-  register_deactivation_hook( __FILE__, 'idsview_deactivate' );
-  register_uninstall_hook(__FILE__, 'idsview_uninstall');
+  register_deactivation_hook( dirname(__FILE__), 'idsview_deactivate' );
+  register_uninstall_hook(dirname(__FILE__), 'idsview_uninstall');
 }
 
 // Add settings link
@@ -157,7 +191,7 @@ function idsview_add_options_page() {
 
 // Display a 'Settings' link on the main Plugins page
 function idsview_plugin_action_links($links, $file) {
-	if ($file == plugin_basename(__FILE__)) {
+	if ($file == plugin_basename(dirname(__FILE__))) {
 		$idsapi_links = '<a href="' . get_admin_url() . 'options-general.php?page=idsview">' . __('Settings') . '</a>';
 		array_unshift($links, $idsapi_links);
 	}
@@ -180,12 +214,12 @@ function idsview_register_widget() {
 function idsview_add_menu() {
   $idsview_menu_title = idsapi_variable_get('idsview', 'menu_title', IDS_VIEW_MENU_TITLE);
   if (idsapi_variable_get('idsview', 'api_key_validated', FALSE)) {
-    add_menu_page('IDS View', $idsview_menu_title, 'manage_options', 'idsview_menu', 'idsview_general_page', plugins_url('images/ids.png', __FILE__));
+    add_menu_page('IDS View', $idsview_menu_title, 'manage_options', 'idsview_menu', 'idsview_general_page', plugins_url(IDS_IMAGES_PATH . '/ids.png', dirname(__FILE__)));
     add_submenu_page( 'idsview_menu', 'IDS View', 'IDS View', 'manage_options', 'idsview_menu');
     add_submenu_page( 'idsview_menu', 'Settings', 'Settings', 'manage_options', 'options-general.php?page=idsview');
   }
   else {
-    add_menu_page('IDS View', $idsview_menu_title, 'manage_options', 'idsview_menu', 'idsview_admin_main', plugins_url('images/ids.png', __FILE__));
+    add_menu_page('IDS View', $idsview_menu_title, 'manage_options', 'idsview_menu', 'idsview_admin_main', plugins_url(IDS_IMAGES_PATH . '/ids.png', dirname(__FILE__)));
   }
   add_submenu_page( 'idsview_menu', 'Help', 'Help', 'manage_options', 'idsview_help', 'idsview_help_page');
 }
@@ -193,6 +227,8 @@ function idsview_add_menu() {
 function idsview_general_page() {
   global $ids_assets;
   $datasets = idsview_get_datasets();
+  idsview_templates_exist();
+  idsapi_report_errors();
   ?>
   <div class="wrap">
   <div id="icon-edit-pages" class="icon32"><br /></div>
@@ -311,16 +347,16 @@ function idsview_help_page() {
 
 // Enqueue stylesheet. We keep separate functions as in the future we might want to use different stylesheets for each plugin.
 function idsview_add_stylesheet() {
-  wp_register_style('idsview_style', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'idsplugins.css', __FILE__));
+  wp_register_style('idsview_style', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'idsplugins.css', dirname(__FILE__)));
   wp_enqueue_style('idsview_style');
 }
 
 // Enqueue admin stylesheet
 function idsview_add_admin_stylesheet() {
   idsview_add_stylesheet();
-  wp_register_style('idsview_chosen_style', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'chosen/chosen.css', __FILE__));
+  wp_register_style('idsview_chosen_style', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'chosen/chosen.css', dirname(__FILE__)));
   wp_enqueue_style('idsview_chosen_style');
-  wp_register_style('idsview_jqwidgets_style', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'jqwidgets/styles/jqx.base.css', __FILE__));
+  wp_register_style('idsview_jqwidgets_style', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'jqwidgets/styles/jqx.base.css', dirname(__FILE__)));
   wp_enqueue_style('idsview_jqwidgets_style');
 }
 
@@ -330,23 +366,23 @@ function idsview_add_javascript($hook) {
   if ($hook == 'settings_page_idsview') { // Only in the admin page.
     wp_print_scripts( 'jquery' );
     wp_print_scripts( 'jquery-ui-tabs' );
-    wp_register_script('idsview_chosen_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'chosen/chosen.jquery.js', __FILE__));
+    wp_register_script('idsview_chosen_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'chosen/chosen.jquery.js', dirname(__FILE__)));
     wp_enqueue_script('idsview_chosen_javascript');
-    wp_register_script('idsview_jqwidgets_jqxcore_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'jqwidgets/jqwidgets/jqxcore.js', __FILE__));
+    wp_register_script('idsview_jqwidgets_jqxcore_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'jqwidgets/jqwidgets/jqxcore.js', dirname(__FILE__)));
     wp_enqueue_script('idsview_jqwidgets_jqxcore_javascript');
-    wp_register_script('idsview_jqwidgets_jqxbuttons_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'jqwidgets/jqwidgets/jqxbuttons.js', __FILE__));
+    wp_register_script('idsview_jqwidgets_jqxbuttons_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'jqwidgets/jqwidgets/jqxbuttons.js', dirname(__FILE__)));
     wp_enqueue_script('idsview_jqwidgets_jqxbuttons_javascript');
-    wp_register_script('idsview_jqwidgets_jqxdropdownbutton_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'jqwidgets/jqwidgets/jqxdropdownbutton.js', __FILE__));
+    wp_register_script('idsview_jqwidgets_jqxdropdownbutton_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'jqwidgets/jqwidgets/jqxdropdownbutton.js', dirname(__FILE__)));
     wp_enqueue_script('idsview_jqwidgets_jqxdropdownbutton_javascript');
-    wp_register_script('idsview_jqwidgets_jqxscrollbar_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'jqwidgets/jqwidgets/jqxscrollbar.js', __FILE__));
+    wp_register_script('idsview_jqwidgets_jqxscrollbar_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'jqwidgets/jqwidgets/jqxscrollbar.js', dirname(__FILE__)));
     wp_enqueue_script('idsview_jqwidgets_jqxscrollbar_javascript');
-    wp_register_script('idsview_jqwidgets_jqxpanel_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'jqwidgets/jqwidgets/jqxpanel.js', __FILE__));
+    wp_register_script('idsview_jqwidgets_jqxpanel_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'jqwidgets/jqwidgets/jqxpanel.js', dirname(__FILE__)));
     wp_enqueue_script('idsview_jqwidgets_jqxpanel_javascript');
-    wp_register_script('idsview_jqwidgets_jqxtree_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'jqwidgets/jqwidgets/jqxtree.js', __FILE__));
+    wp_register_script('idsview_jqwidgets_jqxtree_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'jqwidgets/jqwidgets/jqxtree.js', dirname(__FILE__)));
     wp_enqueue_script('idsview_jqwidgets_jqxtree_javascript');
-    wp_register_script('idsview_jqwidgets_jqxcheckbox_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'jqwidgets/jqwidgets/jqxcheckbox.js', __FILE__));
+    wp_register_script('idsview_jqwidgets_jqxcheckbox_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'jqwidgets/jqwidgets/jqxcheckbox.js', dirname(__FILE__)));
     wp_enqueue_script('idsview_jqwidgets_jqxcheckbox_javascript');
-    wp_register_script('idsview_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'idsplugins.js', __FILE__));
+    wp_register_script('idsview_javascript', plugins_url(IDS_PLUGINS_SCRIPTS_PATH . 'idsplugins.js', dirname(__FILE__)));
     wp_enqueue_script('idsview_javascript');
     $api_key = idsapi_variable_get('idsview', 'api_key', '');
     $api_key_validated = idsapi_variable_get('idsview', 'api_key_validated', FALSE);
@@ -527,8 +563,7 @@ function idsview_create_post($dataset, $asset, $type) {
   $post = array (
             'ID' => $id,
             'post_author' => 1,
-            'post_date' => date_i18n('Y-m-d H:i:s', $asset->date_created),
-            'post_date_gmt' => get_gmt_from_date(date_i18n('Y-m-d H:i:s', $asset->date_created)),
+            'post_date' => date('Y-m-d H:i:s', strtotime($asset->date_created)),
             'post_content' => $description,
             'post_title' => $title,
             'post_excerpt' => ids_excerpt_post('idsview', $description),
@@ -536,8 +571,6 @@ function idsview_create_post($dataset, $asset, $type) {
             'comment_status' => 'closed',
             'ping_status' => 'closed',
             'post_name' => $post_name,
-            'post_modified' => date_i18n('Y-m-d H:i:s', $asset->date_updated),
-            'post_modified_gmt' => get_gmt_from_date(date_i18n('Y-m-d H:i:s', $asset->date_updated)),
             'post_parent' => 0,
             'guid' => home_url($url) . '/' . $post_name,
             'menu_order' => 0,
