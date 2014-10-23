@@ -1,13 +1,13 @@
 IDS KS API Wordpress Plugin
 ---------------------------------------------------------------------------------------------------------------------------------
 
-This module provides a Wordpress interface for the Institute for Development Studies (IDS)'s Open API (http://api.ids.ac.uk/).
-The goal of the module is to allow retrieving data from the IDS Collections (Eldis and Bridge) for use within a Wordpress site.
+These modules provide a Wordpress interface for the Institute for Development Studies (IDS)'s Open API (http://api.ids.ac.uk/).
+The goal of the modules is to allow retrieving data from the IDS Collections (Eldis and Bridge) for use within a Wordpress site.
 
 
-The IDS KS API plugin allows access to IDS Knowledge Services content of thematically organised and hand selected academic research on poverty reduction in the developing world that is freely available to access online.
+The IDS KS API plugins allow access to IDS Knowledge Services content of thematically organised and hand selected academic research on poverty reduction in the developing world that is freely available to access online.
 
-IDS Knowledge Services offer two collections that can be accessed via this plugin. They are:
+IDS Knowledge Services offer two collections that can be accessed via these plugins. They are:
 
 - BRIDGE is a research and information service supporting gender advocacy and mainstreaming efforts by bridging the gaps between theory, policy and practice. BRIDGE acts as a catalyst by facilitating the generation and exchange of relevant, accessible and diverse gender information in print, online and through other innovative forms of communication. BRIDGE hosts a global resources library on its website, which includes gender-focused information materials in a number of languages, including Arabic, Chinese, English, French, Portuguese and Spanish.
 
@@ -30,8 +30,8 @@ Regions are broad geographic groupings, which enable users to explore our docume
 
 Themes are development topics which reflect the key themes in development.
 
-How do I use the plugin?
-To use the plugin, you must obtain a unique Token-GUID or key for the API. Please register for your API key here. Once obtained, enter this key into the IDS API Token-GUID (key) section of the IDS Plugin Settings.
+How do I use the plugins?
+To use the plugins, you must obtain a unique Token-GUID or key for the API. Please register for your API key here. Once obtained, enter this key into the IDS API Token-GUID (key) section of the IDS Plugins Settings.
 
 The IDS API package actually has two plugins on offer, both allow the administrator to select content from Eldis, BRIDGE or both collections, and bring relevant content easily into the site.
 
