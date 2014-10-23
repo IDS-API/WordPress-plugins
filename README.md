@@ -1,4 +1,4 @@
-IDS KS API Wordpress Plugin
+IDS KS API Wordpress Plugins
 ---------------------------------------------------------------------------------------------------------------------------------
 
 These modules provide a Wordpress interface for the Institute for Development Studies (IDS)'s Open API (http://api.ids.ac.uk/).
