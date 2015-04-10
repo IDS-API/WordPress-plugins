@@ -26,20 +26,34 @@ License: GPLv3
 
 if (!defined('IDS_API_ENVIRONMENT')) define('IDS_API_ENVIRONMENT', 'wordpress');
 
-if (!defined('IDS_API_LIBRARY_PATH')) define('IDS_API_LIBRARY_PATH', dirname(dirname(__FILE__)) . '/idswrapper/');
+if (!defined('IDS_API_LIBRARY_PATH')) {
+  if ($dirs_wrapper = glob(WP_PLUGIN_DIR . '{/*/,/}idswrapper/', GLOB_BRACE)) {
+    define('IDS_API_LIBRARY_PATH', $dirs_wrapper[0]);
+  }
+  else {
+    wp_die(__('IDS View: The required directory "idswrapper" was not found. Please download it from https://github.com/IDS-API/PHP-wrapper/archive/master.zip and place it in the plugins directory.'));
+  }
+}
 if (file_exists(IDS_API_LIBRARY_PATH) && is_readable(IDS_API_LIBRARY_PATH)) {
   require_once(IDS_API_LIBRARY_PATH . 'idswrapper.wrapper.inc');
 } else {
-  wp_die(__('IDS View: The IDS API library directory was not found or could not be read.'));
+  wp_die(__('IDS View: The directory "idswrapper" or its contents could not be read.'));
 }
 
-if (!defined('IDS_COMMON_FILES_PATH')) define('IDS_COMMON_FILES_PATH', dirname(dirname(__FILE__)) . '/idsplugins_common/');
+if (!defined('IDS_COMMON_FILES_PATH')) {
+  if ($dirs_common = glob(WP_PLUGIN_DIR . '{/*/,/}idsplugins_common/', GLOB_BRACE)) {
+    define('IDS_COMMON_FILES_PATH', $dirs_common[0]);
+  }
+  else {
+    wp_die(__('IDS View: The required directory "idsplugins_common" was not found. Please download it from https://github.com/IDS-API/WordPress-Common-Files/archive/master.zip and place it in the plugins directory.'));
+  }
+}
 if (file_exists(IDS_COMMON_FILES_PATH) && is_readable(IDS_COMMON_FILES_PATH)) {
   require_once(IDS_COMMON_FILES_PATH . 'idsplugins.customtypes.inc');
   require_once(IDS_COMMON_FILES_PATH . 'idsplugins.functions.inc');
   require_once(IDS_COMMON_FILES_PATH . 'idsplugins.html.inc');
 } else {
-  wp_die(__('IDS View: A directory with shared files IDS plugins files was not found or could not be read.'));
+  wp_die(__('IDS View: The directory "idsplugins_common" could not be read.'));
 }
 
 require_once('idsview.includes/idsview.default.inc');
@@ -443,6 +457,9 @@ function idsview_asset_permalink($link) {
   if (isset($post->object_id)) {
     $link = add_query_arg('object_id', $post->object_id, $link);
   }
+  if (isset($post->post_parent)) {
+    $link = add_query_arg('page_id', $post->post_parent, $link);
+  }
   return $link;
 }
 
@@ -571,7 +588,7 @@ function idsview_create_post($dataset, $asset, $type) {
             'comment_status' => 'closed',
             'ping_status' => 'closed',
             'post_name' => $post_name,
-            'post_parent' => 0,
+            'post_parent' => $id,
             'guid' => home_url($url) . '/' . $post_name,
             'menu_order' => 0,
             'post_type' => 'ids_' . $type,

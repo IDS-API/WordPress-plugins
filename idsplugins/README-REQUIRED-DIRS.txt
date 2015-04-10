@@ -3,11 +3,10 @@ Please note that the following directories and their content are required for th
 - idswrapper
 - idsplugins_common
 
-*** These directories have to be located in the same directory as this file (.) ***
-
 You can find the latest versions of these files on GitHub:
 
 https://github.com/IDS-API/PHP-wrapper (idswrapper)
 https://github.com/IDS-API/WordPress-Common-Files (idsplugins_common)
 
+*** These directories can be located in Wordpress' plugins directory or in this directory (.)  ***
 
