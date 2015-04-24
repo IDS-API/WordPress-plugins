@@ -116,7 +116,7 @@ function idsview_activate() {
           }
           if (!locate_template(array($page_template))) {
             $error_message = $num . ' - ' . sprintf(__('Template file %s could not be found.'), $page_template);
-            $error_message .= sprintf(__(' See / copy the sample templates in %s.'), $asset_type, IDS_COMMON_FILES_DIR . '/templates/examples');
+            $error_message .= sprintf(__(' See / copy the sample templates in %s.'), $asset_type, IDS_COMMON_FILES_DIR . 'templates/examples');
             idsapi_register_error('idsview', $error_message, 'idsview_templates_exist', 'warning');
           }
         }
@@ -163,7 +163,7 @@ function idsview_templates_exist() {
         $page_template = 'idsview_' . $dataset . '_' . $asset_type . '.php';
         if (!locate_template(array($page_template))) {
           $error_message = sprintf(__('Template file %s could not be found.'), $page_template);
-          $error_message .= sprintf(__(' See the sample templates in %s.'), IDS_COMMON_FILES_DIR . '/templates/examples');
+          $error_message .= sprintf(__(' See the sample templates in %s.'), IDS_COMMON_FILES_DIR . 'templates/examples');
           idsapi_register_error('idsview', $error_message, 'idsview_templates_exist', 'warning');
         }
       }
